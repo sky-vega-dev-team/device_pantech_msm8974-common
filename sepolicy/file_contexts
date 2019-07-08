@@ -7,6 +7,9 @@
 # Misc 
 /dev/block/platform/msm_sdcc\.1/by-name/emmclog         u:object_r:misc_block_device:s0
 
+# Gatekeeper
+/vendor/bin/hw/android\.hardware\.gatekeeper@1\.0-service\.software			u:object_r:hal_gatekeeper_default_exec:s0
+
 # Old camera socket
 /data/cam_socket1                                       u:object_r:camera_socket:s0
 /data/cam_socket2                                       u:object_r:camera_socket:s0
