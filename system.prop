@@ -89,6 +89,13 @@ persist.sys.usb.control=disable
 persist.sys.isUsbOtgEnabled=true
 persist.pantech.usb.version=0
 
+# Google
+ro.com.google.clientidbase=android-pantech
+ro.com.google.clientidbase.ms=android-pantech
+ro.com.google.clientidbase.am=android-pantech
+ro.com.google.clientidbase.gmm=android-pantech
+ro.com.google.clientidbase.yt=android-pantech
+
 # Dalvik heap
 dalvik.vm.heapstartsize=16m
 dalvik.vm.heapgrowthlimit=192m
