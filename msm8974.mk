@@ -361,7 +361,8 @@ PRODUCT_PACKAGES += \
 PRODUCT_PACKAGES += \
     wcnss_service \
     wificond \
-    WifiOverlay
+    WifiOverlay \
+    TetheringConfigOverlay
 
 # Call the proprietary setup
 $(call inherit-product-if-exists, vendor/pantech/msm8974-common/msm8974-common-vendor.mk)
