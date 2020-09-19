@@ -211,7 +211,8 @@ TARGET_LD_SHIM_LIBS := \
     /system/vendor/lib/libmmcamera2_stats_algorithm.so|libshim_atomic.so \
     /system/vendor/lib/hw/camera.msm8974.so|libshim_atomic.so \
     /system/vendor/lib/hw/camera.msm8974.so|libshim_camera_parameters.so \
-    /system/vendor/bin/mpdecision|libshim_atomic.so
+    /system/vendor/bin/mpdecision|libshim_atomic.so \
+    /system/vendor/lib/libril-qc-qmi-1.so|libaudioclient_shim.so
 
 
 # TWRP Support - Optional
