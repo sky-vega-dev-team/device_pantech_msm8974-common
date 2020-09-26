@@ -101,9 +101,9 @@ PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/ld.config.txt:$(TARGET_COPY_OUT_SYSTEM)/etc/swcodec/ld.config.txt
 
 PRODUCT_PACKAGES += \
-    android.hardware.audio@5.0-impl \
-    android.hardware.audio@5.0-service \
-    android.hardware.audio.effect@5.0-impl \
+    android.hardware.audio@6.0-impl \
+    android.hardware.audio@6.0-service \
+    android.hardware.audio.effect@6.0-impl \
     audio.a2dp.default \
     audio_policy.msm8974 \
     audio.primary.msm8974 \
