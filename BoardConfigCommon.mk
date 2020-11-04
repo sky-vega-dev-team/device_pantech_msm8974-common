@@ -160,10 +160,16 @@ BOARD_USES_QCOM_HARDWARE := true
 TARGET_RECOVERY_FSTAB := $(COMMON_PATH)/rootdir/etc/fstab.qcom
 
 # SELinux
-include device/qcom/sepolicy-legacy/sepolicy.mk
+#include device/qcom/sepolicy-legacy/sepolicy.mk
+
+#BOARD_SEPOLICY_DIRS += \
+#    $(COMMON_PATH)/sepolicy
 
 BOARD_SEPOLICY_DIRS += \
-    $(COMMON_PATH)/sepolicy
+    $(COMMON_PATH)/sepolicy-tmp
+
+
+SELINUX_IGNORE_NEVERALLOWS := true
 
 # Sensor Compat
 BOARD_GLOBAL_CFLAGS += -DCOMPAT_SENSORS_M
