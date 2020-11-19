@@ -71,6 +71,8 @@ debug.sf.enable_gl_backpressure=1
 debug.stagefright.omx_default_rank.sw-audio=1
 debug.stagefright.omx_default_rank=0
 debug.stagefright.ccodec=0
+media.stagefright.legacyencoder=true
+media.stagefright.less-secure=true
 
 # QMI
 persist.data.qmi.adb_logmask=0
