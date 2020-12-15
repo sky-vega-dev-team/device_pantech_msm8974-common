@@ -247,10 +247,10 @@ PRODUCT_PACKAGES += \
 
 # RIL
 PRODUCT_PACKAGES += \
-    libaudioclient_shim \
     libcnefeatureconfig \
-    libxml2 \
-    librmnetctl
+    libril_shim \
+    librmnetctl \
+    libxml2
 
 # TimeKeep
 PRODUCT_PACKAGES += \
