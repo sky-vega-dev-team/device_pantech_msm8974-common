@@ -121,6 +121,7 @@ PRODUCT_PACKAGES += \
     Snap \
     camera.msm8974 \
     libshim_atomic \
+    libshim_binder \
     libshim_camera_parameters
 
 PRODUCT_COPY_FILES += \
