@@ -1,0 +1,11 @@
+cc_library_shared {
+
+    srcs: ["atomic.cpp"],
+
+    proprietary: true,
+
+    name: "libshim_atomic",
+
+    compile_multilib: "32",
+
+}

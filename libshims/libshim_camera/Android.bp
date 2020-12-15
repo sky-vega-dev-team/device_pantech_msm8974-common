@@ -1,0 +1,11 @@
+cc_library_shared {
+
+    srcs: ["CameraParameters.cpp"],
+
+    proprietary: true,
+
+    name: "libshim_camera_parameters",
+
+    compile_multilib: "32",
+
+}
