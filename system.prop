@@ -106,6 +106,9 @@ ro.com.google.clientidbase.am=android-pantech
 ro.com.google.clientidbase.gmm=android-pantech
 ro.com.google.clientidbase.yt=android-pantech
 
+# Recovery
+persist.vendor.recovery_update=false
+
 # Surfaceflinger
 ro.surface_flinger.max_frame_buffer_acquired_buffers=3
 
