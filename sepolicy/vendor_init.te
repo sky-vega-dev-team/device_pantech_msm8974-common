@@ -1,2 +1,4 @@
 allow vendor_init wifi_data_file:dir { search setattr };
-
+domain_auto_trans(vendor_init, vendor_toolbox_exec, vendor_init)
+allow vendor_init unlabeled:{ dir file } { getattr relabelfrom };
+allow vendor_init unlabeled:dir search;
