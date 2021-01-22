@@ -1,2 +1,4 @@
 allow ueventd unlabeled:dir { search read };
 allow ueventd unlabeled:file { getattr open read };
+allow ueventd exfat:file { getattr open read };
+allow ueventd exfat:dir search;
