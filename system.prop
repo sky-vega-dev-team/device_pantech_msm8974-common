@@ -46,6 +46,9 @@ ro.bluetooth.sap=false
 # Camera
 camera2.portability.force_api=1
 
+# fastbootd
+ro.fastbootd.available=true
+
 # Perf
 ro.qualcomm.perf.cores_online=2
 ro.vendor.extension_library=libqti-perfd-client.so
