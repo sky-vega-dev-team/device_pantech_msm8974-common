@@ -1,2 +1,2 @@
-allow vendor_init wifi_data_file:dir { search setattr };
-
+allow vendor_init wifi_data_file:dir { getattr search setattr };
+allow vendor_init dpmd_data_file:dir { getattr search setattr };

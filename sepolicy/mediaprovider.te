@@ -1,2 +1,0 @@
-allow mediaprovider unlabeled:dir { getattr open read search };
-allow mediaprovider unlabeled:file getattr;
