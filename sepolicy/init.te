@@ -4,3 +4,6 @@ allow init shell_exec:file execute_no_trans;
 allow init sysfs_graphics:file write;
 allow init system_file:file execute_no_trans;
 allow init sysfs_leds:lnk_file read;
+allow init hwservicemanager:binder { call transfer };
+allow init hal_gatekeeper_hwservice:hwservice_manager { find add };
+allow init hidl_base_hwservice:hwservice_manager add;
