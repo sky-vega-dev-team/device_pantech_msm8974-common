@@ -1,2 +1,4 @@
 allow zygote proc_cmdline:file { read open getattr};
 allow zygote device:file { open write };
+allow zygote bluetooth_prop:file { read open getattr };
+allow zygote exported_camera_prop:file { read open getattr };
