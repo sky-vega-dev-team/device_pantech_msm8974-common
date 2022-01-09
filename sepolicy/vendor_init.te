@@ -1,2 +1,2 @@
-allow vendor_init wifi_data_file:dir { search setattr };
-
+allow vendor_init wifi_data_file:dir { search setattr getattr };
+allow vendor_init proc:file write;
