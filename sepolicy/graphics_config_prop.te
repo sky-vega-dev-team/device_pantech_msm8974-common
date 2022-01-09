@@ -1,0 +1,1 @@
+allow graphics_config_prop gpuservice:file { read open getattr };
