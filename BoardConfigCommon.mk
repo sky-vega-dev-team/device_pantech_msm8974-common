@@ -186,6 +186,9 @@ HWUI_COMPILE_FOR_PERF := true
 # VNDK VERSION
 BOARD_VNDK_VERSION := current
 
+# Dedupe VNDK libraries with identical core variants.
+TARGET_VNDK_USE_CORE_VARIANT := true
+
 # Wifi
 BOARD_HAS_QCOM_WLAN              := true
 BOARD_WLAN_DEVICE                := qcwcn
