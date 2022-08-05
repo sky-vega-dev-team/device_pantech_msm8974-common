@@ -183,6 +183,9 @@ TARGET_USE_OLD_SOUND_PICKER := true
 # HWUI
 HWUI_COMPILE_FOR_PERF := true
 
+# VNDK VERSION
+BOARD_VNDK_VERSION := current
+
 # Wifi
 BOARD_HAS_QCOM_WLAN              := true
 BOARD_WLAN_DEVICE                := qcwcn
