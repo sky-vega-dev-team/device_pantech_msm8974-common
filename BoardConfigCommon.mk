@@ -45,7 +45,7 @@ TARGET_FLATTEN_APEX := true
 # Kernel
 BOARD_KERNEL_BASE := 0x00000000
 BOARD_KERNEL_CMDLINE := androidboot.hardware=qcom
-# BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive
+BOARD_KERNEL_CMDLINE += androidboot.selinux=permissive
 BOARD_KERNEL_CMDLINE += androidboot.btmacaddr=00:00:00:00:00:00
 BOARD_KERNEL_IMAGE_NAME := zImage
 BOARD_KERNEL_PAGESIZE := 2048
@@ -55,6 +55,8 @@ BOARD_DTBTOOL_ARGS := -2
 TARGET_KERNEL_ARCH := arm
 # LZMA_RAMDISK_TARGETS := [boot,recovery]
 TARGET_KERNEL_SOURCE := kernel/pantech/msm8x74
+KERNEL_TOOLCHAIN_PREFIX := arm-eabi-
+KERNEL_TOOLCHAIN := /home/hiru/android/kernel/GCC/arm-eabi-gcc-9.x/bin
 
 # Fixes Wifi-Mobile Data toggle issue
 MALLOC_SVELTE := true
