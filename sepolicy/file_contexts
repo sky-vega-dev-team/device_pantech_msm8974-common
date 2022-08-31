@@ -9,6 +9,7 @@
 /dev/block/platform/msm_sdcc\.1/by-name/rawdata         u:object_r:persist_block_device:s0
 
 # Gatekeeper
+/(vendor|system/vendor)/bin/hw/android\.hardware\.audio\.service\.pantech8974             u:object_r:hal_audio_default_exec:s0
 /(vendor|system/vendor)/bin/hw/android\.hardware\.gatekeeper@1\.0-service\.software			u:object_r:hal_gatekeeper_default_exec:s0
 
 # Old camera socket
