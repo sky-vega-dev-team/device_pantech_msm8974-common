@@ -20,3 +20,6 @@
 # TimeKeep
 /sys/devices/qpnp-rtc-[0-9]+/rtc/rtc0(/.*)?         u:object_r:sysfs_rtc:s0
 /(system/vendor|vendor)/bin/timekeep                u:object_r:timekeep_exec:s0
+
+# Conn_init
+/system/bin/conn_init            u:object_r:conn_init_exec:s0
