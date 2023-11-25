@@ -124,6 +124,7 @@ PRODUCT_PACKAGES += \
     audio.primary.msm8974 \
     audio.r_submix.default \
     audio.usb.default \
+    libaudioroute \
     libaudioclient_shim \
     libqcompostprocbundle \
     libqcomvisualizer \
@@ -252,6 +253,7 @@ PRODUCT_PACKAGES += \
 # OMX
 PRODUCT_PACKAGES += \
     libc2dcolorconvert \
+    libminijail:32 \
     libdivxdrmdecrypt \
     libOmxAacEnc \
     libOmxAmrEnc \
