@@ -8,3 +8,6 @@ ro.vndk.version=current
 # RIL
 vendor.rild.libpath=/vendor/lib/libril-qc-qmi-1.so
 vendor.rild.libargs=-d /dev/smd0
+
+# Display
+ro.surface_flinger.enable_frame_rate_override=false
