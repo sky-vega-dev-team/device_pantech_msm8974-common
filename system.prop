@@ -54,6 +54,7 @@ drm.service.enabled=true
 ro.vendor.qti.sys.fw.bservice_enable=true
 
 # Graphics
+ro.hardware.egl=adreno
 ro.sf.lcd_density=480
 ro.opengles.version=196608
 ro.hdcp2.rx=tz
