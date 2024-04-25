@@ -65,6 +65,7 @@ debug.mdpcomp.logs=0
 persist.hwc.mdpcomp.enable=true
 persist.debug.wfd.enable=1
 debug.hwui.use_buffer_age=false
+ro.hwui.use_vulkan=false
 debug.sf.disable_backpressure=1
 debug.sf.disable_client_composition_cache=1
 debug.renderengine.backend=gles
