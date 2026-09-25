@@ -6,8 +6,6 @@ cc_library_shared {
         "libaudioclient",
     ],
 
-    proprietary: true,
-
     name: "libaudioclient_shim",
 
     compile_multilib: "32",
