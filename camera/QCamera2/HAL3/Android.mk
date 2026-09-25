@@ -17,6 +17,8 @@ LOCAL_SRC_FILES := \
 
 LOCAL_CFLAGS := -Wall -Werror
 LOCAL_CFLAGS += -DHAS_MULTIMEDIA_HINTS
+# Legacy QCamera2 uses String8::string() and String8::isEmpty().
+LOCAL_CFLAGS += -DENABLE_STRING8_OBSOLETE_METHODS
 
 # QCamera3Factory.cpp has unused parameters.
 LOCAL_CFLAGS += -Wno-unused-parameter
