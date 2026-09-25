@@ -2,6 +2,8 @@ cc_library_shared {
 
     srcs: ["atomic.cpp"],
 
+    header_libs: ["libcutils_headers"],
+
     proprietary: true,
 
     name: "libshim_atomic",
