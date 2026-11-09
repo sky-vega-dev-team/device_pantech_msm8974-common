@@ -7,3 +7,4 @@ allow init sysfs_leds:lnk_file read;
 allow init hwservicemanager:binder { call transfer };
 allow init hal_gatekeeper_hwservice:hwservice_manager { find add };
 allow init hidl_base_hwservice:hwservice_manager add;
+allow init vcsFPService_device:chr_file { rw_file_perms getattr };

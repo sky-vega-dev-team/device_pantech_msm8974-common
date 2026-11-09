@@ -89,7 +89,9 @@ TARGET_HAS_LEGACY_CAMERA_HAL1 := true
 TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS := true
 TARGET_PROCESS_SDK_VERSION_OVERRIDE := \
     /system/bin/mediaserver=22 \
-    /system/vendor/bin/mm-qcamera-daemon=22
+    /system/vendor/bin/mm-qcamera-daemon=22 \
+    /system/vendor/bin/vcsFPService=21 \
+    /system/vendor/bin/hw/android.hardware.biometrics.fingerprint@2.1-service=21
 
 # Charger
 BOARD_CHARGER_DISABLE_INIT_BLANK := true

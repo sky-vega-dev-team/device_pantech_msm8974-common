@@ -1,0 +1,52 @@
+type vcsFPService, domain;
+type vcsFPService_exec, exec_type, file_type;
+type vcsFPService_data_file, file_type, data_file_type;
+type vcsFPService_device, dev_type, file_type;
+
+# vcsFPService
+init_daemon_domain(vcsFPService)
+binder_use(vcsFPService)
+
+allow fingerprintd system_app:unix_stream_socket { connectto read write setopt };
+
+allow vcsFPService vcsFPService_data_file:dir create_dir_perms;
+allow vcsFPService vcsFPService_data_file:file create_file_perms;
+allow vcsFPService vcsFPService_data_file:chr_file create_file_perms;
+allow vcsFPService vcsFPService_data_file:fifo_file create_file_perms;
+allow vcsFPService system_app:process signull;
+allow vcsFPService vcsFPService_device:file create_file_perms;
+allow vcsFPService vcsFPService_device:dir { open read write remove_name add_name search};
+allow vcsFPService vcsFPService_device:file { open read write getattr setattr};
+allow vcsFPService vcsFPService_device:fifo_file create_file_perms;
+allow vcsFPService vcsFPService_device:fifo_file unlink;
+
+allow vcsFPService vcsFPService_device:chr_file { read write open ioctl };
+
+allow vcsFPService shell_exec:file { execute execute_no_trans read open getattr};
+allow system_app vcsFPService_device:dir search;
+allow system_app vcsFPService_device:file { rw_file_perms getattr lock };
+
+allow system_app vcsFPService_device:fifo_file { write open read lock};
+allow system_app system_server:process signull;
+
+
+allow system_app vcsFPService_data_file:dir r_dir_perms;
+allow system_app vcsFPService_data_file:file r_file_perms;
+allow system_app vcsFPService_data_file:fifo_file create_file_perms;
+allow system_app vcsFPService:process signull;
+
+allow vcsFPService tee_device:chr_file create_file_perms;
+allow vcsFPService firmware_file:dir r_dir_perms;
+allow vcsFPService firmware_file:file r_file_perms;
+
+allow ueventd vcsFPService_data_file:chr_file create_file_perms;
+allow tee vcsFPService_data_file:dir create_dir_perms;
+allow tee vcsFPService_data_file:file create_file_perms;
+allow vcsFPService toolbox_exec:file { execute execute_no_trans read open getattr };
+
+allow priv_app device:dir { open read write remove_name add_name search};
+allow priv_app vcsFPService_data_file:dir { open read write remove_name add_name search};
+
+allow vcsFPService self:capability { kill sys_nice };
+allow vcsFPService vcs_data_file:dir create_dir_perms;
+allow vcsFPService vcs_data_file:file { rw_file_perms getattr create setattr unlink };
