@@ -2,7 +2,6 @@
 type conn_init, domain;
 type conn_init_exec, exec_type, file_type;
 
-# Started by logwrapper in init
 domain_auto_trans(init, conn_init_exec, conn_init)
 allow conn_init devpts:chr_file { read write };
 
@@ -12,3 +11,6 @@ allow conn_init persist_block_device:blk_file { open read getattr };
 # allow /data/misc/wifi access for firmware files
 allow conn_init wifi_data_file:dir w_dir_perms;
 allow conn_init wifi_data_file:file create_file_perms;
+
+allow conn_init self:capability { chown dac_override };
+allow conn_init block_device:dir search;

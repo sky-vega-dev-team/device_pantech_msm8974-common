@@ -75,11 +75,6 @@ on property:persist.pantech.usb.version=0
 	write /sys/devices/msm_dwc3/dwc3_usb_ver_swi 0
 	
 # Allow persistent usb charging disabling
-service qcom-usb-sh /system/bin/sh /init.qcom.usb.sh
-    class core
-    user root
-    oneshot
-
 # USB compositions
 on property:sys.usb.config=diag,adb
     write /sys/class/android_usb/android0/enable 0

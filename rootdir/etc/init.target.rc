@@ -70,7 +70,6 @@ on fs
     chmod 0775 /dev/block/platform/msm_sdcc.1/by-name
 
     mount ext4 /dev/block/platform/msm_sdcc.1/by-name/system /system remount rw barrier=1
-    exec /system/bin/sh /system/etc/init.qcom.modem_links.sh
     mount ext4 /dev/block/platform/msm_sdcc.1/by-name/system /system remount ro barrier=1
     setprop qcom.audio.init complete
 
@@ -338,14 +337,7 @@ service usf_sw_calib /system/bin/usf_sw_calib
     group system inet
     disabled
 
-service usf-post-boot /system/bin/sh /system/etc/usf_post_boot.sh
-    class late_start
-    user root
-    disabled
-    oneshot
-
 on property:init.svc.bootanim=stopped
-    start usf-post-boot
 
 service imsqmidaemon /system/bin/imsqmidaemon
     class main

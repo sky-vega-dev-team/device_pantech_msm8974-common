@@ -1,0 +1,2 @@
+init_daemon_domain(btnvtool)
+typeattribute btnvtool domain;
