@@ -364,4 +364,7 @@
     <bool name="config_ui_enableFadingMarquee">false</bool>
 
 
+    <!-- Swipe on the fingerprint sensor to show notifications -->
+    <bool name="config_supportSystemNavigationKeys">true</bool>
+
 </resources>

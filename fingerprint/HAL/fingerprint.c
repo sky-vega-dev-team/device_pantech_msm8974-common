@@ -358,6 +358,8 @@ static void do_enroll(fpc_fingerprint_device_t* vdev, uint32_t generation) {
             finish_operation(vdev, generation);
             return;
         }
+        if (frames == 0)
+            continue;
 
         pthread_mutex_lock(&vdev->engine_lock);
         ret = vdev->engine.enrol(vdev->frames, frames, (int)fid, trial, path);
@@ -403,6 +405,8 @@ static void do_scan(fpc_fingerprint_device_t* vdev, uint32_t generation) {
             finish_operation(vdev, generation);
             return;
         }
+        if (frames == 0)
+            continue;
 
         pthread_mutex_lock(&vdev->engine_lock);
         vdev->engine.set_security_level(FPC1080_SECURITY_LEVEL);
@@ -429,16 +433,38 @@ static void do_scan(fpc_fingerprint_device_t* vdev, uint32_t generation) {
     }
 }
 
+/* Closing the device puts the sensor to sleep unless navigation was requested. */
+static void resume_navigation(void) {
+    int fd;
+
+    fd = open(FPC1080_DEVICE, O_RDWR | O_CLOEXEC);
+    if (fd < 0)
+        return;
+
+    if (ioctl(fd, FPC1080_IOCTL_START_NAVIGATION, FPC1080_NAVIGATION_MODE_SWIPE) != 0)
+        ALOGE("cannot start navigation: %s", strerror(errno));
+    close(fd);
+}
+
 static void* worker_thread(void* data) {
     fpc_fingerprint_device_t* vdev = (fpc_fingerprint_device_t*)data;
+    bool navigation_pending = true;
 
     for (;;) {
         worker_state_t state;
         uint32_t generation;
 
         pthread_mutex_lock(&vdev->lock);
-        while (vdev->state == STATE_IDLE)
+        while (vdev->state == STATE_IDLE) {
+            if (navigation_pending) {
+                navigation_pending = false;
+                pthread_mutex_unlock(&vdev->lock);
+                resume_navigation();
+                pthread_mutex_lock(&vdev->lock);
+                continue;
+            }
             pthread_cond_wait(&vdev->cond, &vdev->lock);
+        }
         state = vdev->state;
         generation = vdev->generation;
         pthread_mutex_unlock(&vdev->lock);
@@ -449,6 +475,7 @@ static void* worker_thread(void* data) {
             do_enroll(vdev, generation);
         else if (state == STATE_SCAN)
             do_scan(vdev, generation);
+        navigation_pending = true;
     }
 
     return NULL;
