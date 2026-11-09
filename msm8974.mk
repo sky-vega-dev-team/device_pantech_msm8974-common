@@ -291,7 +291,7 @@ PRODUCT_COPY_FILES += \
 # Fingerprint
 PRODUCT_PACKAGES += \
     android.hardware.biometrics.fingerprint@2.1-service \
-    fingerprint.msm8960 \
+    fingerprint.msm8974 \
     ValidityService \
     fingerpintd \
     libC
