@@ -291,15 +291,7 @@ PRODUCT_COPY_FILES += \
 # Fingerprint
 PRODUCT_PACKAGES += \
     android.hardware.biometrics.fingerprint@2.1-service \
-    fingerprint.msm8974 \
-    ValidityService \
-    fingerpintd \
-    libC
-
-PRODUCT_COPY_FILES += \
-    $(LOCAL_PATH)/configs/privapp-permissions-t6.xml:system/etc/permissions/privapp-permissions-t6.xml \
-    $(LOCAL_PATH)/idc/Validity_Navigation_Sensor.idc:system/usr/idc/Validity_Navigation_Sensor.idc \
-    $(LOCAL_PATH)/keylayout/Validity_Navigation_Sensor.kl:system/usr/keylayout/Validity_Navigation_Sensor.kl
+    fingerprint.msm8974
 
 PRODUCT_SHIPPING_API_LEVEL := 19
 

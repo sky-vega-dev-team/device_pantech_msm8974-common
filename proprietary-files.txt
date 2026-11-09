@@ -275,3 +275,6 @@ vendor/lib/libyas530.so
 vendor/lib/libmmcamera2_wnr_module.so
 vendor/lib/libmmcamera_faceproc.so
 vendor/lib/libmmcamera_truly_cm7700_eeprom.so
+
+# Fingerprint
+lib/libfpc1080_jni.so:vendor/lib/libfpc1080_jni.so

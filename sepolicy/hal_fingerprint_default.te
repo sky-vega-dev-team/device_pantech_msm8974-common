@@ -1,2 +1,7 @@
+type fpc1080_device, dev_type;
+
+allow hal_fingerprint_default fpc1080_device:chr_file rw_file_perms;
+
+allow hal_fingerprint_default system_data_file:dir search;
 allow hal_fingerprint_default fingerprintd_data_file:dir create_dir_perms;
-allow hal_fingerprint_default system_app:unix_stream_socket connectto;
+allow hal_fingerprint_default fingerprintd_data_file:file create_file_perms;
