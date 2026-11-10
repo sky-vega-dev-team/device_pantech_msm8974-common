@@ -62,6 +62,10 @@ namespace qcamera {
 #define CAM_MAX_SYNC_LATENCY 4
 #define TIMEOUT_NEVER -1
 
+/* Read by the sensor libraries, see sensors/common/sensor_exposure.c */
+#define HAL_VIDEO_PROP "vendor.camera.hal.video"
+#define HAL_FULL_SIZE_PROP "vendor.camera.hal.full_size"
+
 cam_capability_t *gCamCapability[MM_CAMERA_MAX_NUM_SENSORS];
 const camera_metadata_t *gStaticMetadata[MM_CAMERA_MAX_NUM_SENSORS];
 
@@ -945,6 +949,24 @@ int QCamera3HardwareInterface::configureStreams(
 
     AddSetMetaEntryToBatch(mParameters, CAM_INTF_META_STREAM_INFO,
                 sizeof(stream_config_info), &stream_config_info);
+
+    /*
+     * Tell the sensor libraries what the daemon does not: whether there is
+     * a video stream, for the movie mode of the OIS, and whether a stream
+     * is larger than a binned mode, which the full size mode then serves.
+     */
+    bool video = false, full_size = false;
+    for (uint32_t i = 0; i < stream_config_info.num_streams; i++) {
+        if (stream_config_info.type[i] == CAM_STREAM_TYPE_VIDEO)
+            video = true;
+        if (stream_config_info.stream_sizes[i].width >
+                gCamCapability[mCameraId]->active_array_size.width / 2 ||
+                stream_config_info.stream_sizes[i].height >
+                gCamCapability[mCameraId]->active_array_size.height / 2)
+            full_size = true;
+    }
+    property_set(HAL_VIDEO_PROP, video ? "1" : "0");
+    property_set(HAL_FULL_SIZE_PROP, full_size ? "1" : "0");
 
     mCameraHandle->ops->set_parms(mCameraHandle->camera_handle, mParameters);
 

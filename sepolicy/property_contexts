@@ -3,3 +3,4 @@ persist.vendor.timeadjust   u:object_r:vendor_timekeep_prop:s0
 
 # Camera
 vendor.camera.sensor.        u:object_r:vendor_camera_sensor_prop:s0
+vendor.camera.hal.           u:object_r:vendor_camera_hal_prop:s0
