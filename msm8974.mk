@@ -131,6 +131,8 @@ PRODUCT_PACKAGES += \
     camera.msm8974 \
     libmmcamera_imx135 \
     libmmcamera_imx214 \
+    libmmcamera_rohm_eeprom \
+    libmmcamera_rumba_sa_eeprom \
     libmmcamera_s5k6b2yx \
     libshim_atomic \
     libshim_binder \

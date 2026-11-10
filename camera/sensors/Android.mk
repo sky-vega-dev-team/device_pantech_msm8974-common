@@ -27,3 +27,21 @@ endef
 $(foreach s,$(PANTECH_CAMERA_SENSORS),\
     $(if $(wildcard $(LOCAL_PATH)/$(s)/data/$(TARGET_DEVICE)),\
         $(eval $(call pantech-camera-sensor,$(s)))))
+
+# Calibration libraries for the EEPROMs of the kernel, by qcom,eeprom-name
+PANTECH_CAMERA_EEPROMS := rohm_eeprom rumba_sa_eeprom
+
+define pantech-camera-eeprom
+include $$(CLEAR_VARS)
+LOCAL_MODULE := libmmcamera_$(1)
+LOCAL_SRC_FILES := eeprom/pantech_eeprom.c
+LOCAL_SHARED_LIBRARIES := libdl liblog
+LOCAL_CXX_STL := none
+LOCAL_CFLAGS := -Wall -Werror -fvisibility=hidden -DEEPROM_NAME=$(1)
+LOCAL_MODULE_TAGS := optional
+LOCAL_32_BIT_ONLY := true
+LOCAL_VENDOR_MODULE := true
+include $$(BUILD_SHARED_LIBRARY)
+endef
+
+$(foreach e,$(PANTECH_CAMERA_EEPROMS),$(eval $(call pantech-camera-eeprom,$(e))))

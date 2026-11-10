@@ -137,7 +137,6 @@ vendor/lib/libchromatix_skuf_ov5648_p5v23c_common.so
 vendor/lib/libchromatix_skuf_ov5648_p5v23c_default_video.so
 vendor/lib/libchromatix_skuf_ov5648_p5v23c_preview.so
 vendor/lib/libchromatix_skuf_ov5648_p5v23c_snapshot.so
-vendor/lib/libmmcamera_truly_cm7700_eeprom.so
 
 # DRM
 lib/libdrmdecrypt.so:vendor/lib/libdrmdecrypt.so
