@@ -39,7 +39,6 @@ lib/libchromatix_s5k6b2yx_default_video.so
 lib/libchromatix_s5k6b2yx_preview.so
 lib/libchromatix_s5k6b2yx_vt.so
 lib/libchromatix_s5k6b2yx_vt_common.so
-lib/libqomx_core.so:vendor/lib/libqomx_core.so
 vendor/lib/libchromatix_imx134_common.so
 vendor/lib/libchromatix_imx134_default_video.so
 vendor/lib/libchromatix_imx134_hfr_120.so
@@ -150,7 +149,6 @@ vendor/lib/libmmcamera_faceproc.so
 vendor/lib/libmmcamera_truly_cm7700_eeprom.so
 vendor/lib/libmmipl.so
 vendor/lib/libmmjpeg.so
-vendor/lib/libmmjpeg_interface.so
 vendor/lib/libmmqjpeg_codec.so
 vendor/lib/libqomx_jpegdec.so
 vendor/lib/libqomx_jpegenc.so
