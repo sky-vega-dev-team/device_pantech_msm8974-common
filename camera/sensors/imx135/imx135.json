@@ -9,5 +9,8 @@
   "black_level": 64,
   "active_array": [0, 0, 4208, 3120],
   "max_pipeline_frame_delay": 0,
-  "exposure_table_size": 16
+  "exposure_table_size": 16,
+  "chromatix_replace": {
+    "libchromatix_imx135_common_hdr.so": "libchromatix_imx135_common.so"
+  }
 }

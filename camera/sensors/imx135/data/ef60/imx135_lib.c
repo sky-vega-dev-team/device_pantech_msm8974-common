@@ -1140,7 +1140,8 @@ static struct sensor_lib_chromatix_t imx135_chromatix[] = {
         .camcorder_chromatix = "libchromatix_imx135_hfr_120.so",
     },
     {
-        .common_chromatix = "libchromatix_imx135_common_hdr.so",
+        /* libchromatix_imx135_common_hdr.so is not among the extracted blobs */
+        .common_chromatix = "libchromatix_imx135_common.so",
         .camera_preview_chromatix = "libchromatix_imx135_video_hd.so",
         .camera_snapshot_chromatix = "libchromatix_imx135_video_hd.so",
         .camcorder_chromatix = "libchromatix_imx135_video_hd.so",

@@ -428,10 +428,17 @@ class Gen:
         self.emit('static struct sensor_lib_chromatix_t %s_chromatix[] = {' % n)
         for i in range(max(chsize, osize)):
             names = []
+            missing = []
             for k in range(4):
                 p = e.ptr(chs + stride * min(i, chsize - 1) + 4 * k)
-                names.append('"%s"' % e.string(p) if p else 'NULL')
+                name = e.string(p) if p else None
+                if name in extra.get('chromatix_replace', {}):
+                    missing.append(name)
+                    name = extra['chromatix_replace'][name]
+                names.append('"%s"' % name if name else 'NULL')
             self.emit('    {')
+            for name in sorted(set(missing)):
+                self.emit('        /* %s is not among the extracted blobs */' % name)
             if i >= chsize:
                 self.emit('        /* Not in the Pantech library, which has fewer'
                           ' chromatix entries than resolutions */')
