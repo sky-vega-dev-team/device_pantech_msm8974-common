@@ -57,6 +57,8 @@ namespace qcamera {
 #define DATA_PTR(MEM_OBJ,INDEX) MEM_OBJ->getPtr( INDEX )
 
 #define EMPTY_PIPELINE_DELAY 2
+/* The urgent 3A result and the full metadata of each request */
+#define PARTIAL_RESULT_COUNT 2
 #define CAM_MAX_SYNC_LATENCY 4
 #define TIMEOUT_NEVER -1
 
@@ -1230,14 +1232,24 @@ void QCamera3HardwareInterface::handleMetadataWithLock(
                 camera3_capture_result_t result;
                 memset(&result, 0, sizeof(camera3_capture_result_t));
 
-                // Send shutter notify to frameworks
-                notify_msg.type = CAMERA3_MSG_SHUTTER;
-                notify_msg.message.shutter.frame_number = i->frame_number;
-                notify_msg.message.shutter.timestamp = capture_time;
-                mCallbackOps->notify(mCallbackOps, &notify_msg);
+                /*
+                 * With a frame split over both VFEs the daemon can send the
+                 * urgent metadata of a frame twice. A second shutter or 3A
+                 * result for a frame is an error to the framework, which
+                 * closes the camera on it.
+                 */
+                if (i->partial_result_cnt > 0)
+                    break;
 
-                i->timestamp = capture_time;
-                i->bNotified = 1;
+                // Send shutter notify to frameworks
+                if (!i->bNotified) {
+                    notify_msg.type = CAMERA3_MSG_SHUTTER;
+                    notify_msg.message.shutter.frame_number = i->frame_number;
+                    notify_msg.message.shutter.timestamp = capture_time;
+                    mCallbackOps->notify(mCallbackOps, &notify_msg);
+                    i->timestamp = capture_time;
+                    i->bNotified = 1;
+                }
                 i->partial_result_cnt++;
                 // Extract 3A metadata
                 result.result =
@@ -1273,7 +1285,26 @@ void QCamera3HardwareInterface::handleMetadataWithLock(
         memset(&result, 0, sizeof(camera3_capture_result_t));
         ALOGV("%s: frame_number in the list is %d", __func__, i->frame_number);
 
-        i->partial_result_cnt++;
+        /*
+         * The framework wants a shutter before the result, and the result
+         * that completes the metadata to carry the last partial result
+         * number, also for a frame whose urgent metadata never came.
+         */
+        if (!i->bNotified) {
+            camera3_notify_msg_t notify_msg;
+            memset(&notify_msg, 0, sizeof(notify_msg));
+            if (i->frame_number < frame_number)
+                i->timestamp = capture_time -
+                    (frame_number - i->frame_number) * NSEC_PER_33MSEC;
+            else
+                i->timestamp = capture_time;
+            notify_msg.type = CAMERA3_MSG_SHUTTER;
+            notify_msg.message.shutter.frame_number = i->frame_number;
+            notify_msg.message.shutter.timestamp = i->timestamp;
+            mCallbackOps->notify(mCallbackOps, &notify_msg);
+            i->bNotified = 1;
+        }
+        i->partial_result_cnt = PARTIAL_RESULT_COUNT;
         result.partial_result = i->partial_result_cnt;
 
         // Flush out all entries with less or equal frame numbers.
@@ -4062,7 +4093,7 @@ int QCamera3HardwareInterface::initStaticMetadata(int cameraId)
                       &max_pipeline_depth,
                       1);
 
-    int32_t partial_result_count = 2;
+    int32_t partial_result_count = PARTIAL_RESULT_COUNT;
     staticInfo.update(ANDROID_REQUEST_PARTIAL_RESULT_COUNT,
                       &partial_result_count,
                        1);
