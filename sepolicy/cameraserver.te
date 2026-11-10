@@ -5,3 +5,5 @@ allow cameraserver cameraserver:fd use;
 
 # libmmjpeg and libqomx_core still have text relocations
 allow cameraserver vendor_file:file execmod;
+
+get_prop(cameraserver, vendor_camera_sensor_prop)

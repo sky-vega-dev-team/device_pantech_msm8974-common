@@ -17,8 +17,10 @@
 #define LOG_TAG "sensor_exposure"
 
 #include <errno.h>
+#include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
+#include <sys/system_properties.h>
 
 #include <log/log.h>
 
@@ -26,6 +28,9 @@
 
 /* No resolution chosen yet; the stock libraries start from the same value */
 #define RES_INVALID 8
+
+/* Read by the HAL, see publish_output_size */
+#define SENSOR_OUTPUT_PROP "vendor.camera.sensor.output"
 
 /* frame_length_factor is Q10 */
 #define FL_FACTOR_SHIFT 10
@@ -250,6 +255,26 @@ static int32_t apply_initial_exposure(void)
     return 0;
 }
 
+/*
+ * The 3A regions of HAL3 come in active array coordinates, but the stats
+ * modules of the hammerhead daemon take them in those of the sensor output,
+ * and nothing tells the HAL what the sensor outputs. Leave it in a property
+ * for the HAL: "<active width>x<active height>:<output width>x<output height>".
+ */
+static void publish_output_size(uint32_t res)
+{
+    struct sensor_lib_out_info_t *info = &sensor_lib_ptr.out_info_array->out_info[res];
+    sensor_active_array_t *active = sensor_lib_ptr.active_array;
+    char value[PROP_VALUE_MAX];
+
+    if (!active)
+        return;
+    snprintf(value, sizeof(value), "%ux%u:%ux%u", active->width, active->height,
+            info->x_output, info->y_output);
+    if (__system_property_set(SENSOR_OUTPUT_PROP, value) < 0)
+        ALOGE("%s: could not set %s to %s", __func__, SENSOR_OUTPUT_PROP, value);
+}
+
 static int32_t set_resolution(uint32_t res)
 {
     struct sensor_lib_out_info_array *out = sensor_lib_ptr.out_info_array;
@@ -263,6 +288,7 @@ static int32_t set_resolution(uint32_t res)
         return -1;
     }
     st.res = res;
+    publish_output_size(res);
     return 0;
 }
 

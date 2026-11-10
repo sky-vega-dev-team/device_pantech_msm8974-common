@@ -1,1 +1,4 @@
 type vendor_timekeep_prop, property_type;
+
+# Camera sensor output size, from the sensor libraries to the HAL
+type vendor_camera_sensor_prop, property_type;
