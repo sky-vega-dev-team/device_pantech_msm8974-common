@@ -29,15 +29,6 @@
   "devices": {
     "ef60": {
       "global_gain_addr": 516
-    },
-    "ef63": {
-      "omit_resolutions": [
-        0,
-        3
-      ]
     }
-  },
-  "omit_resolutions": [
-    0
-  ]
+  }
 }

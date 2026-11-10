@@ -447,6 +447,182 @@ static struct msm_camera_i2c_reg_array imx214_res_settings_array_4_array[] = {
     { 0xae21, 0x005c, 0 },
 };
 
+static struct msm_camera_i2c_reg_array imx214_res_settings_array_0_array[] = {
+    { 0x0114, 0x0003, 0 },
+    { 0x0220, 0x0000, 0 },
+    { 0x0221, 0x0011, 0 },
+    { 0x0222, 0x0001, 0 },
+    { 0x0340, 0x000c, 0 },
+    { 0x0341, 0x0078, 0 },
+    { 0x0342, 0x0013, 0 },
+    { 0x0343, 0x0090, 0 },
+    { 0x0344, 0x0000, 0 },
+    { 0x0345, 0x0000, 0 },
+    { 0x0346, 0x0000, 0 },
+    { 0x0347, 0x0000, 0 },
+    { 0x0348, 0x0010, 0 },
+    { 0x0349, 0x006f, 0 },
+    { 0x034a, 0x000c, 0 },
+    { 0x034b, 0x002f, 0 },
+    { 0x0381, 0x0001, 0 },
+    { 0x0383, 0x0001, 0 },
+    { 0x0385, 0x0001, 0 },
+    { 0x0387, 0x0001, 0 },
+    { 0x0900, 0x0000, 0 },
+    { 0x0901, 0x0000, 0 },
+    { 0x0902, 0x0000, 0 },
+    { 0x3000, 0x0035, 0 },
+    { 0x3054, 0x0001, 0 },
+    { 0x305c, 0x0011, 0 },
+    { 0x0112, 0x000a, 0 },
+    { 0x0113, 0x000a, 0 },
+    { 0x034c, 0x0010, 0 },
+    { 0x034d, 0x0070, 0 },
+    { 0x034e, 0x000c, 0 },
+    { 0x034f, 0x0030, 0 },
+    { 0x0401, 0x0000, 0 },
+    { 0x0404, 0x0000, 0 },
+    { 0x0405, 0x0010, 0 },
+    { 0x0408, 0x0000, 0 },
+    { 0x0409, 0x0000, 0 },
+    { 0x040a, 0x0000, 0 },
+    { 0x040b, 0x0000, 0 },
+    { 0x040c, 0x0010, 0 },
+    { 0x040d, 0x0070, 0 },
+    { 0x040e, 0x000c, 0 },
+    { 0x040f, 0x0030, 0 },
+    { 0x0301, 0x0005, 0 },
+    { 0x0303, 0x0002, 0 },
+    { 0x0305, 0x0003, 0 },
+    { 0x0306, 0x0000, 0 },
+    { 0x0307, 0x0096, 0 },
+    { 0x0309, 0x000a, 0 },
+    { 0x030b, 0x0001, 0 },
+    { 0x0310, 0x0000, 0 },
+    { 0x0820, 0x0012, 0 },
+    { 0x0821, 0x00c0, 0 },
+    { 0x0822, 0x0000, 0 },
+    { 0x0823, 0x0000, 0 },
+    { 0x3a03, 0x0008, 0 },
+    { 0x3a04, 0x00c0, 0 },
+    { 0x3a05, 0x0002, 0 },
+    { 0x0b06, 0x0001, 0 },
+    { 0x30a2, 0x0000, 0 },
+    { 0x30b4, 0x0000, 0 },
+    { 0x3a02, 0x00ff, 0 },
+    { 0x3013, 0x0000, 0 },
+    { 0x0202, 0x000c, 0 },
+    { 0x0203, 0x006e, 0 },
+    { 0x0224, 0x0001, 0 },
+    { 0x0225, 0x00f4, 0 },
+    { 0x0204, 0x0000, 0 },
+    { 0x0205, 0x0000, 0 },
+    { 0x020e, 0x0001, 0 },
+    { 0x020f, 0x0000, 0 },
+    { 0x0210, 0x0001, 0 },
+    { 0x0211, 0x0000, 0 },
+    { 0x0212, 0x0001, 0 },
+    { 0x0213, 0x0000, 0 },
+    { 0x0214, 0x0001, 0 },
+    { 0x0215, 0x0000, 0 },
+    { 0x0216, 0x0000, 0 },
+    { 0x0217, 0x0000, 0 },
+    { 0x4170, 0x0000, 0 },
+    { 0x4171, 0x0010, 0 },
+    { 0x4176, 0x0000, 0 },
+    { 0x4177, 0x003c, 0 },
+    { 0xae20, 0x0004, 0 },
+    { 0xae21, 0x005c, 0 },
+};
+
+static struct msm_camera_i2c_reg_array imx214_res_settings_array_3_array[] = {
+    { 0x0114, 0x0003, 0 },
+    { 0x0220, 0x0000, 0 },
+    { 0x0221, 0x0011, 0 },
+    { 0x0222, 0x0001, 0 },
+    { 0x0340, 0x0004, 0 },
+    { 0x0341, 0x00c8, 0 },
+    { 0x0342, 0x0013, 0 },
+    { 0x0343, 0x0090, 0 },
+    { 0x0344, 0x0000, 0 },
+    { 0x0345, 0x0000, 0 },
+    { 0x0346, 0x0001, 0 },
+    { 0x0347, 0x0078, 0 },
+    { 0x0348, 0x0010, 0 },
+    { 0x0349, 0x006f, 0 },
+    { 0x034a, 0x000a, 0 },
+    { 0x034b, 0x00b7, 0 },
+    { 0x0381, 0x0001, 0 },
+    { 0x0383, 0x0001, 0 },
+    { 0x0385, 0x0001, 0 },
+    { 0x0387, 0x0001, 0 },
+    { 0x0900, 0x0001, 0 },
+    { 0x0901, 0x0022, 0 },
+    { 0x0902, 0x0002, 0 },
+    { 0x3000, 0x0035, 0 },
+    { 0x3054, 0x0001, 0 },
+    { 0x305c, 0x0011, 0 },
+    { 0x0112, 0x000a, 0 },
+    { 0x0113, 0x000a, 0 },
+    { 0x034c, 0x0008, 0 },
+    { 0x034d, 0x0038, 0 },
+    { 0x034e, 0x0004, 0 },
+    { 0x034f, 0x00a0, 0 },
+    { 0x0401, 0x0000, 0 },
+    { 0x0404, 0x0000, 0 },
+    { 0x0405, 0x0010, 0 },
+    { 0x0408, 0x0000, 0 },
+    { 0x0409, 0x0000, 0 },
+    { 0x040a, 0x0000, 0 },
+    { 0x040b, 0x0000, 0 },
+    { 0x040c, 0x0008, 0 },
+    { 0x040d, 0x0038, 0 },
+    { 0x040e, 0x0004, 0 },
+    { 0x040f, 0x00a0, 0 },
+    { 0x0301, 0x0005, 0 },
+    { 0x0303, 0x0002, 0 },
+    { 0x0305, 0x0003, 0 },
+    { 0x0306, 0x0000, 0 },
+    { 0x0307, 0x0073, 0 },
+    { 0x0309, 0x000a, 0 },
+    { 0x030b, 0x0001, 0 },
+    { 0x0310, 0x0000, 0 },
+    { 0x0820, 0x000e, 0 },
+    { 0x0821, 0x0060, 0 },
+    { 0x0822, 0x0000, 0 },
+    { 0x0823, 0x0000, 0 },
+    { 0x3a03, 0x0006, 0 },
+    { 0x3a04, 0x0068, 0 },
+    { 0x3a05, 0x0001, 0 },
+    { 0x0b06, 0x0001, 0 },
+    { 0x30a2, 0x0000, 0 },
+    { 0x30b4, 0x0000, 0 },
+    { 0x3a02, 0x00ff, 0 },
+    { 0x3013, 0x0000, 0 },
+    { 0x0202, 0x0004, 0 },
+    { 0x0203, 0x00be, 0 },
+    { 0x0224, 0x0001, 0 },
+    { 0x0225, 0x00f4, 0 },
+    { 0x0204, 0x0000, 0 },
+    { 0x0205, 0x0000, 0 },
+    { 0x020e, 0x0001, 0 },
+    { 0x020f, 0x0000, 0 },
+    { 0x0210, 0x0001, 0 },
+    { 0x0211, 0x0000, 0 },
+    { 0x0212, 0x0001, 0 },
+    { 0x0213, 0x0000, 0 },
+    { 0x0214, 0x0001, 0 },
+    { 0x0215, 0x0000, 0 },
+    { 0x0216, 0x0000, 0 },
+    { 0x0217, 0x0000, 0 },
+    { 0x4170, 0x0000, 0 },
+    { 0x4171, 0x0010, 0 },
+    { 0x4176, 0x0000, 0 },
+    { 0x4177, 0x003c, 0 },
+    { 0xae20, 0x0004, 0 },
+    { 0xae21, 0x005c, 0 },
+};
+
 static struct msm_camera_i2c_reg_setting imx214_res_settings_array_settings[] = {
     {
         .reg_setting = imx214_res_settings_array_1_array,
@@ -469,11 +645,25 @@ static struct msm_camera_i2c_reg_setting imx214_res_settings_array_settings[] = 
         .data_type = MSM_CAMERA_I2C_BYTE_DATA,
         .delay = 0,
     },
+    {
+        .reg_setting = imx214_res_settings_array_0_array,
+        .size = 85,
+        .addr_type = MSM_CAMERA_I2C_WORD_ADDR,
+        .data_type = MSM_CAMERA_I2C_BYTE_DATA,
+        .delay = 0,
+    },
+    {
+        .reg_setting = imx214_res_settings_array_3_array,
+        .size = 85,
+        .addr_type = MSM_CAMERA_I2C_WORD_ADDR,
+        .data_type = MSM_CAMERA_I2C_BYTE_DATA,
+        .delay = 0,
+    },
 };
 
 static struct sensor_lib_reg_settings_array imx214_res_settings_array = {
     .reg_settings = imx214_res_settings_array_settings,
-    .size = 3,
+    .size = 5,
 };
 
 static sensor_res_cfg_type_t imx214_res_cfg[] = {
@@ -528,11 +718,37 @@ static struct sensor_lib_out_info_t imx214_out_info[] = {
         .min_fps = 5.0f,
         .max_fps = 121.32f,
     },
+    {
+        /* 4208x3120, Pantech mode 1 */
+        .x_output = 4208,
+        .y_output = 3120,
+        .line_length_pclk = 5008,
+        .frame_length_lines = 3192,
+        /* 684000000 in the Pantech library */
+        .vt_pixel_clk = 480000000,
+        .op_pixel_clk = 480000000,
+        .binning_factor = 1,
+        .min_fps = 5.0f,
+        .max_fps = 30.0f,
+    },
+    {
+        /* 2104x1184, Pantech mode 2 */
+        .x_output = 2104,
+        .y_output = 1184,
+        .line_length_pclk = 5008,
+        .frame_length_lines = 1224,
+        /* 684000000 in the Pantech library */
+        .vt_pixel_clk = 368000000,
+        .op_pixel_clk = 368000000,
+        .binning_factor = 1,
+        .min_fps = 5.0f,
+        .max_fps = 60.03f,
+    },
 };
 
 static struct sensor_lib_out_info_array imx214_out_info_array = {
     .out_info = imx214_out_info,
-    .size = 3,
+    .size = 5,
 };
 
 static struct msm_camera_csi2_params imx214_csi_params_1 = {
@@ -595,18 +811,62 @@ static struct msm_camera_csi2_params imx214_csi_params_4 = {
     },
 };
 
+static struct msm_camera_csi2_params imx214_csi_params_0 = {
+    .csid_params = {
+        .lane_cnt = 4,
+        .lane_assign = 0x0000,
+        .phy_sel = 0,
+        .lut_params = {
+            .num_cid = 3,
+            .vc_cfg = { &imx214_cid_cfg[0], &imx214_cid_cfg[1], &imx214_cid_cfg[2] },
+            .vc_cfg_size = sizeof(struct msm_camera_csid_vc_cfg),
+        },
+    },
+    .csiphy_params = {
+        .lane_cnt = 4,
+        .settle_cnt = 0x1b,
+        .lane_mask = 0x0000,
+        .combo_mode = 0,
+        .csid_core = 0,
+    },
+};
+
+static struct msm_camera_csi2_params imx214_csi_params_3 = {
+    .csid_params = {
+        .lane_cnt = 4,
+        .lane_assign = 0x0000,
+        .phy_sel = 0,
+        .lut_params = {
+            .num_cid = 3,
+            .vc_cfg = { &imx214_cid_cfg[0], &imx214_cid_cfg[1], &imx214_cid_cfg[2] },
+            .vc_cfg_size = sizeof(struct msm_camera_csid_vc_cfg),
+        },
+    },
+    .csiphy_params = {
+        .lane_cnt = 4,
+        .settle_cnt = 0x1b,
+        .lane_mask = 0x0000,
+        .combo_mode = 0,
+        .csid_core = 0,
+    },
+};
+
 static struct msm_camera_csi2_params *imx214_csi_params_list[] = {
     &imx214_csi_params_1,
     &imx214_csi_params_2,
     &imx214_csi_params_4,
+    &imx214_csi_params_0,
+    &imx214_csi_params_3,
 };
 
 static struct sensor_lib_csi_params_array imx214_csi_params_array = {
     .csi2_params = imx214_csi_params_list,
-    .size = 3,
+    .size = 5,
 };
 
 static struct sensor_crop_parms_t imx214_crop_params[] = {
+    { 0, 0, 0, 0 },
+    { 0, 0, 0, 0 },
     { 0, 0, 0, 0 },
     { 0, 0, 0, 0 },
     { 0, 0, 0, 0 },
@@ -614,7 +874,7 @@ static struct sensor_crop_parms_t imx214_crop_params[] = {
 
 static struct sensor_lib_crop_params_array imx214_crop_params_array = {
     .crop_params = imx214_crop_params,
-    .size = 3,
+    .size = 5,
 };
 
 static struct sensor_lib_chromatix_t imx214_chromatix[] = {
@@ -636,11 +896,23 @@ static struct sensor_lib_chromatix_t imx214_chromatix[] = {
         .camera_snapshot_chromatix = "libchromatix_imx214_hfr_120.so",
         .camcorder_chromatix = "libchromatix_imx214_hfr_120.so",
     },
+    {
+        .common_chromatix = "libchromatix_imx214_common.so",
+        .camera_preview_chromatix = "libchromatix_imx214_snapshot.so",
+        .camera_snapshot_chromatix = "libchromatix_imx214_snapshot.so",
+        .camcorder_chromatix = "libchromatix_imx214_video_uhd.so",
+    },
+    {
+        .common_chromatix = "libchromatix_imx214_common.so",
+        .camera_preview_chromatix = "libchromatix_imx214_hfr_60.so",
+        .camera_snapshot_chromatix = "libchromatix_imx214_hfr_60.so",
+        .camcorder_chromatix = "libchromatix_imx214_hfr_60.so",
+    },
 };
 
 static struct sensor_lib_chromatix_array imx214_chromatix_array = {
     .sensor_lib_chromatix = imx214_chromatix,
-    .size = 3,
+    .size = 5,
 };
 
 static struct msm_camera_i2c_reg_array imx214_test_pattern_regs[] = {

@@ -131,6 +131,15 @@ def flt(v):
     return ('%.6g' % v) + ('' if 'e' in ('%.6g' % v) or '.' in ('%.6g' % v) else '.0') + 'f'
 
 
+# The highest pixel clock one VFE of the MSM8974PRO-AA takes
+VFE_MAX_PIXEL_CLK = 320000000
+
+
+def fps_off(clk, llp, fll, fps):
+    """Whether a pixel clock does not give the frame rate of a mode."""
+    return abs(clk / (llp * fll) - fps) > fps * 0.05
+
+
 class Gen:
     def __init__(self, elf, name):
         self.e = elf
@@ -165,13 +174,18 @@ class Gen:
         self.emit()
         return '&' + cname
 
-    def reg_settings_array(self, field, omit=()):
+    def kept(self, order, size):
+        """The entries of an array of size entries, one per resolution in order."""
+        # Entries past those of the resolutions stay in place
+        return [i for i in order if i < size] + list(range(self.osize, size))
+
+    def reg_settings_array(self, field, order=None):
         e = self.e
         arr_va = e.ptr(self.base + PT[field])
         sets, size = e.ptr(arr_va), e.u32(arr_va + 4)
         cname = '%s_%s' % (self.n, field)
-        bodies = [self.reg_setting(sets + 20 * i, '%s_%d' % (cname, i))
-                  for i in range(size) if i not in omit]
+        order = range(size) if order is None else self.kept(order, size)
+        bodies = [self.reg_setting(sets + 20 * i, '%s_%d' % (cname, i)) for i in order]
         size = len(bodies)
         self.emit('static struct msm_camera_i2c_reg_setting %s_settings[] = {' % cname)
         for b in bodies:
@@ -202,6 +216,26 @@ class Gen:
         lib = {}
         # Resolutions left out, by their index in the Pantech library
         omit = set(extra.get('omit_resolutions', []))
+
+        # The Pantech sensor_lib_out_info_t ends with a mode, which the
+        # hammerhead one does not have. The newer libraries (ef63, ef65) also
+        # have a 32 bit field between vt_pixel_clk and op_pixel_clk; tell the
+        # two apart by binning_factor, which is a small number.
+        oa = e.ptr(b + PT['out_info_array'])
+        oinfo, osize = e.ptr(oa), e.u16(oa + 4)
+        self.osize = osize
+        extra_clk = 4 if e.u32(oinfo + 16) > 0xffff else 0
+        stride = 32 + extra_clk
+
+        # The hammerhead module takes the first resolution that fits. Put
+        # the ones above the pixel clock of one VFE last, so that it splits
+        # the frame over both VFEs only when nothing else will do.
+        def op_clk(i):
+            r = oinfo + stride * i
+            return e.u32(r + extra_clk + 12) or e.u32(r + 8)
+        order = [i for i in range(osize) if i not in omit]
+        order = ([i for i in order if op_clk(i) <= VFE_MAX_PIXEL_CLK] +
+                 [i for i in order if op_clk(i) > VFE_MAX_PIXEL_CLK])
 
         so = e.ptr(b + PT['sensor_output'])
         self.emit('static sensor_output_t %s_sensor_output = {' % n)
@@ -306,7 +340,7 @@ class Gen:
         for f in ('start_settings', 'stop_settings', 'groupon_settings', 'groupoff_settings'):
             lib[f] = self.named_reg_setting(f)
         lib['init_settings_array'] = self.reg_settings_array('init_settings_array')
-        lib['res_settings_array'] = self.reg_settings_array('res_settings_array', omit)
+        lib['res_settings_array'] = self.reg_settings_array('res_settings_array', order)
 
         rc = e.ptr(b + PT['sensor_res_cfg_table'])
         rtab, rsize = e.ptr(rc), e.u16(rc + 4)
@@ -321,19 +355,9 @@ class Gen:
         self.emit('};')
         self.emit()
 
-        # The Pantech sensor_lib_out_info_t ends with a mode, which the
-        # hammerhead one does not have. The newer libraries (ef63, ef65) also
-        # have a 32 bit field between vt_pixel_clk and op_pixel_clk; tell the
-        # two apart by binning_factor, which is a small number.
-        oa = e.ptr(b + PT['out_info_array'])
-        oinfo, osize = e.ptr(oa), e.u16(oa + 4)
-        extra_clk = 4 if e.u32(oinfo + 16) > 0xffff else 0
-        stride = 32 + extra_clk
         self.out_info = []
         self.emit('static struct sensor_lib_out_info_t %s_out_info[] = {' % n)
-        for i in range(osize):
-            if i in omit:
-                continue
+        for i in order:
             r = oinfo + stride * i
             x, y, llp, fll = (e.u16(r + 2 * k) for k in range(4))
             vt = e.u32(r + 8)
@@ -347,6 +371,11 @@ class Gen:
             self.emit('        .y_output = %d,' % y)
             self.emit('        .line_length_pclk = %d,' % llp)
             self.emit('        .frame_length_lines = %d,' % fll)
+            if fps_off(vt, llp, fll, mx) and op and not fps_off(op, llp, fll, mx):
+                # The module times frames and exposure with it, and the sensor
+                # runs at the rate the output clock gives
+                self.emit('        /* %d in the Pantech library */' % vt)
+                vt = op
             self.emit('        .vt_pixel_clk = %d,' % vt)
             if not op:
                 # The hammerhead module divides by it to get the readout time
@@ -368,7 +397,7 @@ class Gen:
         # msm_camera_csi2_params: the hammerhead lut params add vc_cfg_size
         ca = e.ptr(b + PT['csi_params_array'])
         cptrs, csize = e.ptr(ca), e.u16(ca + 4)
-        csi_kept = [i for i in range(csize) if i not in omit]
+        csi_kept = self.kept(order, csize)
         for i in csi_kept:
             p = e.ptr(cptrs + 4 * i)
             num_cid = e.u8(p + 8)
@@ -413,7 +442,7 @@ class Gen:
         cr = e.ptr(b + PT['crop_params_array'])
         crop, crsize = e.ptr(cr), e.u16(cr + 4)
         self.emit('static struct sensor_crop_parms_t %s_crop_params[] = {' % n)
-        crop_kept = [i for i in range(crsize) if i not in omit]
+        crop_kept = self.kept(order, crsize)
         for i in crop_kept:
             self.emit('    { %d, %d, %d, %d },' % tuple(e.u16(crop + 8 * i + 2 * k) for k in range(4)))
         self.emit('};')
@@ -434,7 +463,7 @@ class Gen:
             first = e.u32(chs)
             stride = next(k for k in range(4, 32, 4) if e.u32(chs + k) == first)
         self.emit('static struct sensor_lib_chromatix_t %s_chromatix[] = {' % n)
-        ch_kept = [i for i in range(max(chsize, osize)) if i not in omit]
+        ch_kept = self.kept(order, max(chsize, osize))
         for i in ch_kept:
             names = []
             missing = []

@@ -28,8 +28,5 @@
   "exposure_table_size": 16,
   "chromatix_replace": {
     "libchromatix_imx135_common_hdr.so": "libchromatix_imx135_common.so"
-  },
-  "omit_resolutions": [
-    0
-  ]
+  }
 }
