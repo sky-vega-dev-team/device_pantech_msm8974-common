@@ -129,6 +129,7 @@ PRODUCT_PACKAGES += \
     camera.device@1.0-impl-legacy \
     Snap \
     camera.msm8974 \
+    libmmcamera_imx214 \
     libshim_atomic \
     libshim_binder \
     libshim_camera_parameters

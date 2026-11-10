@@ -50,12 +50,25 @@ typedef enum {
     SENSOR_12_BIT_DIRECT,
 } sensor_raw_output_t;
 
+/*
+ * Order of the later Qualcomm sensor_lib.h. The IMX179, which streams RG10,
+ * has 3 here.
+ */
+typedef enum {
+    SENSOR_BGGR,
+    SENSOR_GBRG,
+    SENSOR_GRBG,
+    SENSOR_RGGB,
+    SENSOR_UYVY,
+    SENSOR_YUYV,
+} sensor_filter_arrangement;
+
 typedef struct {
     sensor_output_format_t output_format;
     sensor_connection_mode_t connection_mode;
     sensor_raw_output_t raw_output;
-    /* Colour filter arrangement reported to HAL3, 3 on the IMX179 */
-    uint32_t filter_arrangement;
+    /* Colour filter arrangement reported to HAL3 */
+    sensor_filter_arrangement filter_arrangement;
 } sensor_output_t;
 
 /* Solid colour test pattern data registers */
@@ -127,14 +140,15 @@ typedef struct {
 
 /* struct csi_lane_params_t comes from the kernel header */
 
-struct sensor_pix_fmt_info_t {
-    uint32_t fourcc;
-};
-
+/*
+ * One virtual channel and its format. Unlike the KitKat layout, which points
+ * to an array of formats, the format is held here: the stock imx179 has
+ * {1, &vc_cfg[0], 'RG10'} and {1, &vc_cfg[1], 'META'}.
+ */
 typedef struct {
     uint16_t vc_cfg_size;
     struct msm_camera_csid_vc_cfg *vc_cfg;
-    struct sensor_pix_fmt_info_t *pix_fmt_fourcc;
+    uint32_t pix_fmt_fourcc;
 } sensor_stream_info_t;
 
 typedef struct {

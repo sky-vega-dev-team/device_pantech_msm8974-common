@@ -183,6 +183,17 @@ class Gen:
         self.emit()
         return '&' + cname
 
+    def filter_arrangement(self):
+        """Bayer order of the first stream, which carries the pixel data."""
+        e = self.e
+        sa = e.ptr(self.base + PT['sensor_stream_info_array'])
+        fourcc = e.u32(e.ptr(e.ptr(sa) + 8)).to_bytes(4, 'little').decode()
+        order = {'BG': 'SENSOR_BGGR', 'GB': 'SENSOR_GBRG', 'BA': 'SENSOR_GRBG',
+                 'RG': 'SENSOR_RGGB'}
+        if fourcc[2:] not in ('10', '12', '08') or fourcc[:2] not in order:
+            raise ValueError('unknown pixel format %s' % fourcc)
+        return order[fourcc[:2]]
+
     def run(self, extra):
         e, n = self.e, self.n
         self.base = b = e.open_lib_result(n)
@@ -193,7 +204,7 @@ class Gen:
         self.emit('    .output_format = %d,' % e.u32(so))
         self.emit('    .connection_mode = %d,' % e.u32(so + 4))
         self.emit('    .raw_output = %d,' % e.u32(so + 8))
-        self.emit('    .filter_arrangement = %d,' % extra['filter_arrangement'])
+        self.emit('    .filter_arrangement = %s,' % self.filter_arrangement())
         self.emit('};')
         self.emit()
 
@@ -261,28 +272,30 @@ class Gen:
         self.emit('};')
         self.emit()
 
+        # The Pantech streams point to an array of formats, one for each of
+        # their vc_cfg_size channels; the hammerhead ones hold one channel and
+        # its format. List each channel once, in the order they appear.
         sa = e.ptr(b + PT['sensor_stream_info_array'])
         sinfo, ssize = e.ptr(sa), e.u16(sa + 4)
+        streams = []
         for i in range(ssize):
             s = sinfo + 12 * i
             vsize, vc, pf = e.u16(s), e.ptr(s + 4), e.ptr(s + 8)
-            self.emit('static struct sensor_pix_fmt_info_t %s_pix_fmt%d[] = {' % (n, i))
             for k in range(vsize):
-                self.emit('    { 0x%08x },' % e.u32(pf + 4 * k))
-            self.emit('};')
-            self.emit()
+                if vc + 3 * k not in cid_addr:
+                    raise ValueError('stream %d does not point into the CID table' % i)
+                entry = (cid_addr[vc + 3 * k], e.u32(pf + 4 * k))
+                if entry not in streams:
+                    streams.append(entry)
         self.emit('static sensor_stream_info_t %s_stream_info[] = {' % n)
-        for i in range(ssize):
-            s = sinfo + 12 * i
-            vsize, vc = e.u16(s), e.ptr(s + 4)
-            if vc not in cid_addr:
-                raise ValueError('stream %d does not point into the CID table' % i)
-            self.emit('    { %d, &%s_cid_cfg[%d], %s_pix_fmt%d },' % (vsize, n, cid_addr[vc], n, i))
+        for cid, fourcc in streams:
+            self.emit("    { 1, &%s_cid_cfg[%d], 0x%08x }, /* %s */" % (
+                n, cid, fourcc, fourcc.to_bytes(4, 'little').decode()))
         self.emit('};')
         self.emit()
         self.emit('static sensor_stream_info_array_t %s_stream_info_array = {' % n)
         self.emit('    .sensor_stream_info = %s_stream_info,' % n)
-        self.emit('    .size = %d,' % ssize)
+        self.emit('    .size = %d,' % len(streams))
         self.emit('};')
         self.emit()
 
@@ -329,6 +342,10 @@ class Gen:
             self.emit('        .line_length_pclk = %d,' % llp)
             self.emit('        .frame_length_lines = %d,' % fll)
             self.emit('        .vt_pixel_clk = %d,' % vt)
+            if not op:
+                # The hammerhead module divides by it to get the readout time
+                self.emit('        /* 0 in the Pantech library */')
+                op = vt
             self.emit('        .op_pixel_clk = %d,' % op)
             self.emit('        .binning_factor = %d,' % binning)
             self.emit('        .min_fps = %s,' % flt(mn))
