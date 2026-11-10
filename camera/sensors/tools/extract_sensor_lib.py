@@ -135,6 +135,27 @@ def flt(v):
 VFE_MAX_PIXEL_CLK = 320000000
 
 
+# Registers of the output clock of the Sony sensors (SMIA++)
+OP_SYS_CLK_DIV = 0x030b
+LINK_BIT_RATE = 0x0820  # 4 bytes, the bit rate of all lanes in Mbps
+
+
+def halve_output_clock(regs):
+    """Half the output clock and link bit rate of a resolution setting."""
+    regs = [list(r) for r in regs]
+    rate = [r for r in regs if LINK_BIT_RATE <= r[0] < LINK_BIT_RATE + 4]
+    div = [r for r in regs if r[0] == OP_SYS_CLK_DIV]
+    if len(div) != 1 or len(rate) != 4:
+        raise ValueError('no output clock registers to halve')
+    div[0][1] *= 2
+    mbps = 0
+    for r in sorted(rate):
+        mbps = (mbps << 8) | r[1]
+    for r in rate:
+        r[1] = (mbps // 2 >> 8 * (LINK_BIT_RATE + 3 - r[0])) & 0xff
+    return regs
+
+
 def fps_off(clk, llp, fll, fps):
     """Whether a pixel clock does not give the frame rate of a mode."""
     return abs(clk / (llp * fll) - fps) > fps * 0.05
@@ -149,16 +170,19 @@ class Gen:
     def emit(self, s=''):
         self.out.append(s)
 
-    def reg_setting(self, va, cname):
+    def reg_setting(self, va, cname, adjust=None):
         """struct msm_camera_i2c_reg_setting at va, with its register array."""
         e = self.e
         arr, size = e.ptr(va), e.u16(va + 4)
         addr, data, delay = e.u32(va + 8), e.u32(va + 12), e.u16(va + 16)
         if size:
+            regs = [(e.u16(a), e.u16(a + 2), e.u32(a + 4))
+                    for a in (arr + 8 * i for i in range(size))]
+            if adjust:
+                regs = adjust(regs)
             self.emit('static struct msm_camera_i2c_reg_array %s_array[] = {' % cname)
-            for i in range(size):
-                a = arr + 8 * i
-                self.emit('    { 0x%04x, 0x%04x, %d },' % (e.u16(a), e.u16(a + 2), e.u32(a + 4)))
+            for r in regs:
+                self.emit('    { 0x%04x, 0x%04x, %d },' % tuple(r))
             self.emit('};')
             self.emit()
         return ('{\n    .reg_setting = %s,\n    .size = %d,\n    .addr_type = %s,\n'
@@ -179,13 +203,14 @@ class Gen:
         # Entries past those of the resolutions stay in place
         return [i for i in order if i < size] + list(range(self.osize, size))
 
-    def reg_settings_array(self, field, order=None):
+    def reg_settings_array(self, field, order=None, adjust=None):
         e = self.e
         arr_va = e.ptr(self.base + PT[field])
         sets, size = e.ptr(arr_va), e.u32(arr_va + 4)
         cname = '%s_%s' % (self.n, field)
         order = range(size) if order is None else self.kept(order, size)
-        bodies = [self.reg_setting(sets + 20 * i, '%s_%d' % (cname, i)) for i in order]
+        bodies = [self.reg_setting(sets + 20 * i, '%s_%d' % (cname, i), (adjust or {}).get(i))
+                  for i in order]
         size = len(bodies)
         self.emit('static struct msm_camera_i2c_reg_setting %s_settings[] = {' % cname)
         for b in bodies:
@@ -227,6 +252,27 @@ class Gen:
         extra_clk = 4 if e.u32(oinfo + 16) > 0xffff else 0
         stride = 32 + extra_clk
 
+        def line_time(i):
+            r = oinfo + stride * i
+            vt, op = e.u32(r + 8), e.u32(r + extra_clk + 12)
+            if fps_off(vt, e.u16(r + 4), e.u16(r + 6), e.f32(r + extra_clk + 24)) and op:
+                vt = op
+            return e.u16(r + 4) / vt
+
+        # A VFE has to take a line as fast as the sensor sends it. A binning
+        # mode sends its lines in a short part of the line time, at an output
+        # clock above the one of a VFE; the module sets the VFE clock from
+        # the pixels and lines alone, below that, and the VFE loses pixels
+        # and writes past its buffers. Send the lines of such a mode at half
+        # the clock, when they still fit in the line time, so that one VFE
+        # takes them at a clock it keeps up with.
+        halved = set()
+        for i in range(osize):
+            r = oinfo + stride * i
+            op = e.u32(r + extra_clk + 12)
+            if op > VFE_MAX_PIXEL_CLK and e.u16(r) * 2 / op < line_time(i) * 0.9:
+                halved.add(i)
+
         # The hammerhead module takes the first resolution at least as large
         # and as fast as the streams ask for, and the first one of all for a
         # full size snapshot. Put the fastest full size mode first, so that
@@ -238,7 +284,8 @@ class Gen:
         # goes last, as a fallback.
         def op_clk(i):
             r = oinfo + stride * i
-            return e.u32(r + extra_clk + 12) or e.u32(r + 8)
+            clk = e.u32(r + extra_clk + 12) or e.u32(r + 8)
+            return clk // 2 if i in halved else clk
 
         def size(i):
             r = oinfo + stride * i
@@ -358,7 +405,8 @@ class Gen:
         for f in ('start_settings', 'stop_settings', 'groupon_settings', 'groupoff_settings'):
             lib[f] = self.named_reg_setting(f)
         lib['init_settings_array'] = self.reg_settings_array('init_settings_array')
-        lib['res_settings_array'] = self.reg_settings_array('res_settings_array', order)
+        lib['res_settings_array'] = self.reg_settings_array(
+            'res_settings_array', order, {i: halve_output_clock for i in halved})
 
         rc = e.ptr(b + PT['sensor_res_cfg_table'])
         rtab, rsize = e.ptr(rc), e.u16(rc + 4)
@@ -395,6 +443,9 @@ class Gen:
                 self.emit('        /* %d in the Pantech library */' % vt)
                 vt = op
             self.emit('        .vt_pixel_clk = %d,' % vt)
+            if i in halved:
+                self.emit('        /* %d in the Pantech library, sent at half of it */' % op)
+                op //= 2
             if not op:
                 # The hammerhead module divides by it to get the readout time
                 self.emit('        /* 0 in the Pantech library */')
