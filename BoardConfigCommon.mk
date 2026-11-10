@@ -199,6 +199,7 @@ TARGET_FS_CONFIG_GEN := $(COMMON_PATH)/config.fs
 # Shims
 TARGET_LD_SHIM_LIBS := \
     /system/vendor/lib/libmmcamera2_sensor_modules.so|libshim_af_tune.so \
+    /system/vendor/lib/libmmcamera2_isp_modules.so|libshim_isp_dual.so \
     /system/vendor/bin/mpdecision|libshim_atomic.so \
     /system/vendor/lib/libperipheral_client.so|libshim_binder.so \
     /system/vendor/lib/libril-qc-qmi-1.so|libaudioclient_shim.so

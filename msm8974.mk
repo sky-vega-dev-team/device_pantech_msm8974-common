@@ -139,7 +139,8 @@ PRODUCT_PACKAGES += \
     libmmcamera_s5k6b2yx \
     libshim_af_tune \
     libshim_atomic \
-    libshim_binder
+    libshim_binder \
+    libshim_isp_dual
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/external_camera_config.xml:$(TARGET_COPY_OUT_VENDOR)/etc/external_camera_config.xml
