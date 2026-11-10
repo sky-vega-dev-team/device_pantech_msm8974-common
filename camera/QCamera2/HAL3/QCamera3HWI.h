@@ -124,6 +124,9 @@ public:
                                    uint32_t tag);
     static bool resetIfNeededROI(cam_area_t* roi, const cam_crop_region_t* scalerCropRegion);
     int32_t cropRegionToZoom(const cam_crop_region_t *cropRegion);
+    bool getSensorOutputSize(int32_t *width, int32_t *height);
+    void activeToSensorRect(cam_rect_t *rect);
+    void sensorToActiveRect(cam_rect_t *rect);
     static void convertLandmarks(cam_face_detection_info_t face, int32_t* landmarks);
     static void postproc_channel_cb_routine(mm_camera_super_buf_t *recvd_frame,
                                             void *userdata);

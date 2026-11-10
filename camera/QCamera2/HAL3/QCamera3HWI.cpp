@@ -2389,7 +2389,9 @@ QCamera3HardwareInterface::translateFromHalMetadata(
             cam_area_t  *hAeRegions =
                 (cam_area_t *)POINTER_OF(CAM_INTF_META_AEC_ROI, metadata);
             int32_t aeRegions[5];
-            convertToRegions(hAeRegions->rect, aeRegions, hAeRegions->weight);
+            cam_rect_t aeRect = hAeRegions->rect;
+            sensorToActiveRect(&aeRect);
+            convertToRegions(aeRect, aeRegions, hAeRegions->weight);
             camMetadata.update(ANDROID_CONTROL_AE_REGIONS, aeRegions, 5);
             ALOGV("%s: Metadata : ANDROID_CONTROL_AE_REGIONS: FWK: [%d, %d, %d, %d] HAL: [%d, %d, %d, %d]",
                 __func__, aeRegions[0], aeRegions[1], aeRegions[2], aeRegions[3],
@@ -2401,7 +2403,9 @@ QCamera3HardwareInterface::translateFromHalMetadata(
             cam_area_t  *hAfRegions =
                 (cam_area_t *)POINTER_OF(CAM_INTF_META_AF_ROI, metadata);
             int32_t afRegions[5];
-            convertToRegions(hAfRegions->rect, afRegions, hAfRegions->weight);
+            cam_rect_t afRect = hAfRegions->rect;
+            sensorToActiveRect(&afRect);
+            convertToRegions(afRect, afRegions, hAfRegions->weight);
             camMetadata.update(ANDROID_CONTROL_AF_REGIONS, afRegions, 5);
             ALOGV("%s: Metadata : ANDROID_CONTROL_AF_REGIONS: FWK: [%d, %d, %d, %d] HAL: [%d, %d, %d, %d]",
                 __func__, afRegions[0], afRegions[1], afRegions[2], afRegions[3],
@@ -3260,6 +3264,76 @@ int32_t QCamera3HardwareInterface::cropRegionToZoom(const cam_crop_region_t *cro
         zoom = i;
     }
     return zoom;
+}
+
+/*===========================================================================
+ * FUNCTION   : getSensorOutputSize
+ *
+ * DESCRIPTION: size the sensor outputs in the current mode, which the sensor
+ *              libraries leave in vendor.camera.sensor.output as
+ *              "<active w>x<active h>:<output w>x<output h>"
+ *
+ * PARAMETERS :
+ *   @width, @height : filled with the output size
+ *
+ * RETURN     : false when this camera has not said, or outputs its whole
+ *              active array
+ *
+ *==========================================================================*/
+bool QCamera3HardwareInterface::getSensorOutputSize(int32_t *width, int32_t *height)
+{
+    const cam_rect_t &active = gCamCapability[mCameraId]->active_array_size;
+    char value[PROPERTY_VALUE_MAX];
+    int aw, ah, ow, oh;
+
+    property_get("vendor.camera.sensor.output", value, "");
+    if (sscanf(value, "%dx%d:%dx%d", &aw, &ah, &ow, &oh) != 4)
+        return false;
+    /* Another camera, or one that has not started yet */
+    if (aw != active.width || ah != active.height)
+        return false;
+    if (ow <= 0 || oh <= 0 || (ow == aw && oh == ah))
+        return false;
+    *width = ow;
+    *height = oh;
+    return true;
+}
+
+/*===========================================================================
+ * FUNCTION   : activeToSensorRect, sensorToActiveRect
+ *
+ * DESCRIPTION: scale a 3A region between active array coordinates, which
+ *              the framework uses, and those of the sensor output, which
+ *              the stats modules of the backend use
+ *
+ * PARAMETERS :
+ *   @rect : region to scale in place
+ *
+ *==========================================================================*/
+void QCamera3HardwareInterface::activeToSensorRect(cam_rect_t *rect)
+{
+    const cam_rect_t &active = gCamCapability[mCameraId]->active_array_size;
+    int32_t w, h;
+
+    if (!getSensorOutputSize(&w, &h))
+        return;
+    rect->left = (int64_t)rect->left * w / active.width;
+    rect->top = (int64_t)rect->top * h / active.height;
+    rect->width = (int64_t)rect->width * w / active.width;
+    rect->height = (int64_t)rect->height * h / active.height;
+}
+
+void QCamera3HardwareInterface::sensorToActiveRect(cam_rect_t *rect)
+{
+    const cam_rect_t &active = gCamCapability[mCameraId]->active_array_size;
+    int32_t w, h;
+
+    if (!getSensorOutputSize(&w, &h))
+        return;
+    rect->left = (int64_t)rect->left * active.width / w;
+    rect->top = (int64_t)rect->top * active.height / h;
+    rect->width = (int64_t)rect->width * active.width / w;
+    rect->height = (int64_t)rect->height * active.height / h;
 }
 
 /*===========================================================================
@@ -5663,6 +5737,7 @@ int QCamera3HardwareInterface::translateToHalMetadata
             reset = resetIfNeededROI(&roi, &scalerCropRegion);
         }
         if (reset) {
+            activeToSensorRect(&roi.rect);
             rc = AddSetMetaEntryToBatch(hal_metadata, CAM_INTF_META_AEC_ROI,
                     sizeof(roi), &roi);
         }
@@ -5676,6 +5751,7 @@ int QCamera3HardwareInterface::translateToHalMetadata
             reset = resetIfNeededROI(&roi, &scalerCropRegion);
         }
         if (reset) {
+            activeToSensorRect(&roi.rect);
             rc = AddSetMetaEntryToBatch(hal_metadata, CAM_INTF_META_AF_ROI,
                     sizeof(roi), &roi);
         }
