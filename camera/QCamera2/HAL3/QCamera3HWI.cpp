@@ -239,6 +239,7 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
       mFirstRequest(false),
       mRepeatingRequest(false),
       mCropRegionSet(false),
+      mLastSettings(NULL),
       mParamHeap(NULL),
       mParameters(NULL),
       mPrevParameters(NULL),
@@ -290,6 +291,8 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
 QCamera3HardwareInterface::~QCamera3HardwareInterface()
 {
     ALOGV("%s: E", __func__);
+    if (mLastSettings)
+        free_camera_metadata(mLastSettings);
     /* We need to stop all streams before deleting any stream */
 
     // NOTE: 'camera3_stream_t *' objects are already freed at
@@ -1633,6 +1636,25 @@ int QCamera3HardwareInterface::processCaptureRequest(
     CameraMetadata meta;
 
     pthread_mutex_lock(&mMutex);
+
+    /*
+     * The framework leaves the settings out of a request that repeats the
+     * ones before, also of the first one after streams are configured again.
+     * Take the last settings given then, rather than fail the request and
+     * have the framework close the camera.
+     */
+    camera3_capture_request_t repeated;
+    if (request != NULL && request->settings == NULL && mFirstRequest &&
+            mLastSettings != NULL) {
+        repeated = *request;
+        repeated.settings = mLastSettings;
+        request = &repeated;
+    } else if (request != NULL && request->settings != NULL &&
+            request->settings != mLastSettings) {
+        if (mLastSettings)
+            free_camera_metadata(mLastSettings);
+        mLastSettings = clone_camera_metadata(request->settings);
+    }
 
     rc = validateCaptureRequest(request);
     if (rc != NO_ERROR) {

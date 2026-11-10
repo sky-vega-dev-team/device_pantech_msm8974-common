@@ -240,6 +240,8 @@ private:
     /* Last ANDROID_SCALER_CROP_REGION asked for, reported back in results */
     cam_crop_region_t mCropRegion;
     bool mCropRegionSet;
+    /* Settings of the last request that had any */
+    camera_metadata_t *mLastSettings;
     QCamera3HeapMemory *mParamHeap;
     metadata_buffer_t* mParameters;
     metadata_buffer_t* mPrevParameters;
