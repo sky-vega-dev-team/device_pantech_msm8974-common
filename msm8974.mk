@@ -125,10 +125,13 @@ PRODUCT_COPY_FILES += \
 
 # Camera
 PRODUCT_PACKAGES += \
-    android.hardware.camera.provider@2.4-impl-legacy \
-    camera.device@1.0-impl-legacy \
+    android.hardware.camera.provider@2.4-impl \
+    camera.device@3.2-impl \
     Snap \
     camera.msm8974 \
+    libmmcamera_interface \
+    libmmjpeg_interface \
+    libqomx_core \
     libmmcamera_imx135 \
     libmmcamera_imx214 \
     libmmcamera_rohm_eeprom \
@@ -136,8 +139,7 @@ PRODUCT_PACKAGES += \
     libmmcamera_s5k6b2yx \
     libshim_af_tune \
     libshim_atomic \
-    libshim_binder \
-    libshim_camera_parameters
+    libshim_binder
 
 PRODUCT_COPY_FILES += \
     $(LOCAL_PATH)/configs/external_camera_config.xml:$(TARGET_COPY_OUT_VENDOR)/etc/external_camera_config.xml

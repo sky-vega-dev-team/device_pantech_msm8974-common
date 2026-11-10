@@ -85,9 +85,9 @@ BOARD_HAVE_BLUETOOTH_QCOM := true
 
 # Camera
 USE_DEVICE_SPECIFIC_CAMERA := true
-TARGET_HAS_LEGACY_CAMERA_HAL1 := true
 TARGET_NEEDS_PLATFORM_TEXT_RELOCATIONS := true
 TARGET_PROCESS_SDK_VERSION_OVERRIDE := \
+    /system/bin/cameraserver=22 \
     /system/bin/mediaserver=22 \
     /system/vendor/bin/mm-qcamera-daemon=22
 
@@ -199,9 +199,6 @@ TARGET_FS_CONFIG_GEN := $(COMMON_PATH)/config.fs
 # Shims
 TARGET_LD_SHIM_LIBS := \
     /system/vendor/lib/libmmcamera2_sensor_modules.so|libshim_af_tune.so \
-    /system/vendor/lib/libmmcamera2_stats_algorithm.so|libshim_atomic.so \
-    /system/vendor/lib/hw/camera.msm8974.so|libshim_atomic.so \
-    /system/vendor/lib/hw/camera.msm8974.so|libshim_camera_parameters.so \
     /system/vendor/bin/mpdecision|libshim_atomic.so \
     /system/vendor/lib/libperipheral_client.so|libshim_binder.so \
     /system/vendor/lib/libril-qc-qmi-1.so|libaudioclient_shim.so

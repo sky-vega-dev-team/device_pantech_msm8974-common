@@ -1,0 +1,7 @@
+# The camera HAL runs in cameraserver, through the passthrough provider
+unix_socket_send(cameraserver, camera, mm-qcamerad)
+allow cameraserver camera_device:chr_file rw_file_perms;
+allow cameraserver cameraserver:fd use;
+
+# libmmjpeg and libqomx_core still have text relocations
+allow cameraserver vendor_file:file execmod;
