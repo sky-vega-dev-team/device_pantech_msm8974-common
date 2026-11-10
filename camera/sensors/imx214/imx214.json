@@ -1,18 +1,43 @@
 {
-  "test_color_reg": [1538, 1540, 1542, 1544],
+  "test_color_reg": [
+    1538,
+    1540,
+    1542,
+    1544
+  ],
   "test_pattern_reg": 1537,
   "iso_at_min_gain": 100.0,
   "min_gain": 1.0,
   "min_focus_distance": 0.1,
-  "physical_size": [4.71, 3.49],
-  "pixel_array": [4208, 3120],
+  "physical_size": [
+    4.71,
+    3.49
+  ],
+  "pixel_array": [
+    4208,
+    3120
+  ],
   "black_level": 64,
-  "active_array": [0, 0, 4208, 3120],
+  "active_array": [
+    0,
+    0,
+    4208,
+    3120
+  ],
   "max_pipeline_frame_delay": 0,
   "exposure_table_size": 16,
   "devices": {
     "ef60": {
       "global_gain_addr": 516
+    },
+    "ef63": {
+      "omit_resolutions": [
+        0,
+        3
+      ]
     }
-  }
+  },
+  "omit_resolutions": [
+    0
+  ]
 }
