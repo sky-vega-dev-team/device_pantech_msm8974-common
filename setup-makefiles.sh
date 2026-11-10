@@ -37,6 +37,7 @@ setup_vendor "$DEVICE_COMMON" "$VENDOR" "$CM_ROOT" true
 write_headers "ef56 ef59 ef60 ef63 ef65"
 
 write_makefiles "$MY_DIR"/proprietary-files.txt
+write_makefiles "$MY_DIR"/proprietary-files-qc.txt
 
 write_footers
 

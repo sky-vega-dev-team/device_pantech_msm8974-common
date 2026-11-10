@@ -27,10 +27,6 @@ vendor/bin/btnvtool
 vendor/lib/libbtnv.so
 
 # Camera
-bin/mm-qcamera-daemon:vendor/bin/mm-qcamera-daemon
-etc/firmware/cpp_firmware_v1_1_1.fw:vendor/etc/firmware/cpp_firmware_v1_1_1.fw
-etc/firmware/cpp_firmware_v1_1_6.fw:vendor/etc/firmware/cpp_firmware_v1_1_6.fw
-etc/firmware/cpp_firmware_v1_2_0.fw:vendor/etc/firmware/cpp_firmware_v1_2_0.fw
 lib/libchromatix_imx135_liveshot.so
 lib/libchromatix_imx214_liveshot.so
 lib/libchromatix_imx214_zsl.so
@@ -142,16 +138,7 @@ vendor/lib/libchromatix_skuf_ov5648_p5v23c_common.so
 vendor/lib/libchromatix_skuf_ov5648_p5v23c_default_video.so
 vendor/lib/libchromatix_skuf_ov5648_p5v23c_preview.so
 vendor/lib/libchromatix_skuf_ov5648_p5v23c_snapshot.so
-vendor/lib/libjpegdhw.so
-vendor/lib/libjpegehw.so
-vendor/lib/libmmcamera2_wnr_module.so
-vendor/lib/libmmcamera_faceproc.so
 vendor/lib/libmmcamera_truly_cm7700_eeprom.so
-vendor/lib/libmmipl.so
-vendor/lib/libmmjpeg.so
-vendor/lib/libmmqjpeg_codec.so
-vendor/lib/libqomx_jpegdec.so
-vendor/lib/libqomx_jpegenc.so
 
 # DRM
 lib/libdrmdecrypt.so:vendor/lib/libdrmdecrypt.so

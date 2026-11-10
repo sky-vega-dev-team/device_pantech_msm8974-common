@@ -30,26 +30,25 @@ if [ ! -f "$HELPER" ]; then
 fi
 . "$HELPER"
 
-if [ $# -eq 0 ]; then
-    SRC=adb
-else
-    if [ $# -eq 1 ]; then
-        SRC=$1
-    else
-        echo "$0: bad number of arguments"
-        echo ""
-        echo "usage: $0 [PATH_TO_EXPANDED_ROM]"
-        echo ""
-        echo "If PATH_TO_EXPANDED_ROM is not specified, blobs will be extracted from"
-        echo "the device using adb pull."
-        exit 1
-    fi
+if [ $# -gt 2 ]; then
+    echo "$0: bad number of arguments"
+    echo ""
+    echo "usage: $0 [PATH_TO_EXPANDED_ROM] [PATH_TO_QC_BLOBS]"
+    echo ""
+    echo "If PATH_TO_EXPANDED_ROM is not specified, blobs will be extracted from"
+    echo "the device using adb pull. PATH_TO_QC_BLOBS defaults to the extracted"
+    echo "Nexus 5 blobs in vendor/lge/hammerhead/proprietary."
+    exit 1
 fi
+
+SRC="${1:-adb}"
+SRC_QC="${2:-$CM_ROOT/vendor/lge/hammerhead/proprietary}"
 
 # Initialize the helper for common device
 setup_vendor "$DEVICE_COMMON" "$VENDOR" "$CM_ROOT" true
 
 extract "$MY_DIR"/proprietary-files.txt "$SRC"
+extract "$MY_DIR"/proprietary-files-qc.txt "$SRC_QC"
 
 # Reinitialize the helper for device
 setup_vendor "$DEVICE" "$VENDOR" "$CM_ROOT"
