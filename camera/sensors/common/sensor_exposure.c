@@ -32,6 +32,12 @@
 /* Read by the HAL, see publish_output_size */
 #define SENSOR_OUTPUT_PROP "vendor.camera.sensor.output"
 
+/* Set by the HAL, see apply_ois_mode */
+#define HAL_VIDEO_PROP "vendor.camera.hal.video"
+
+/* Frames after the start to set the OIS mode once more */
+#define OIS_MODE_RETRY_FRAME 10
+
 /* frame_length_factor is Q10 */
 #define FL_FACTOR_SHIFT 10
 #define FL_FACTOR_ONE (1 << FL_FACTOR_SHIFT)
@@ -54,6 +60,10 @@ static struct {
     uint32_t pending_gain;
     uint32_t pending_fl;
     uint8_t pending;
+
+    /* OIS mode last asked of the kernel, and frames since the start */
+    int32_t ois_mode;
+    uint32_t frames;
 } st;
 
 void sensor_exposure_reset(void)
@@ -183,11 +193,42 @@ static int32_t write_exposure(uint32_t gain, uint32_t fl)
     return 1;
 }
 
+/*
+ * The hammerhead camera daemon turns the OIS on in its preview and capture
+ * mode for every session and never changes the mode. The HAL knows when a
+ * video stream is configured and says so in a property; follow it, so that
+ * video gets the movie mode of the OIS. The kernel refuses OIS commands for
+ * sensors without one.
+ */
+static void apply_ois_mode(int force)
+{
+    char value[PROP_VALUE_MAX] = "";
+    struct sensorb_cfg_data cfg;
+    enum ois_mode_t mode;
+
+    if (st.fd <= 0)
+        return;
+
+    __system_property_get(HAL_VIDEO_PROP, value);
+    mode = value[0] == '1' ? OIS_MODE_VIDEO : OIS_MODE_PREVIEW_CAPTURE;
+    if (!force && (int32_t)mode == st.ois_mode)
+        return;
+    st.ois_mode = mode;
+
+    memset(&cfg, 0, sizeof(cfg));
+    cfg.cfgtype = CFG_SET_OIS_MODE;
+    cfg.cfg.setting = &mode;
+    ioctl(st.fd, VIDIOC_MSM_SENSOR_CFG, &cfg);
+}
+
 /* Called on every start of frame */
 static int32_t apply_exposure(void)
 {
     uint32_t fl, gain, next_fl;
     int32_t rc;
+
+    /* The daemon may turn the OIS on after the first frames */
+    apply_ois_mode(++st.frames == OIS_MODE_RETRY_FRAME);
 
     rc = frame_length(&fl);
     if (rc < 0)
@@ -237,6 +278,9 @@ static int32_t apply_initial_exposure(void)
     rc = frame_length(&fl);
     if (rc < 0)
         return rc;
+
+    st.frames = 0;
+    apply_ois_mode(1);
 
     rc = write_exposure(st.req_gain, fl);
     if (rc == 0)
