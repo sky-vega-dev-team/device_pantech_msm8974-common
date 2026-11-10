@@ -236,6 +236,7 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
       mSupportChannel(NULL),
       mFirstRequest(false),
       mRepeatingRequest(false),
+      mCropRegionSet(false),
       mParamHeap(NULL),
       mParameters(NULL),
       mPrevParameters(NULL),
@@ -950,6 +951,7 @@ int QCamera3HardwareInterface::configureStreams(
     mPendingBuffersMap.mPendingBufferList.clear();
 
     mFirstRequest = true;
+    mCropRegionSet = false;
 
     //Get min frame duration for this streams configuration
     deriveMinFrameDuration();
@@ -2750,6 +2752,13 @@ QCamera3HardwareInterface::translateFromHalMetadata(
                        &cac,
                        1);
 
+    /* The crop region goes to the backend as a zoom ratio */
+    if (!camMetadata.exists(ANDROID_SCALER_CROP_REGION) && mCropRegionSet) {
+        int32_t scalerCropRegion[4] = {mCropRegion.left, mCropRegion.top,
+                mCropRegion.width, mCropRegion.height};
+        camMetadata.update(ANDROID_SCALER_CROP_REGION, scalerCropRegion, 4);
+    }
+
     resultMetadata = camMetadata.release();
     return resultMetadata;
 }
@@ -3216,6 +3225,41 @@ void QCamera3HardwareInterface::convertFromRegions(cam_area_t* roi,
     roi->rect.top = y_min;
     roi->rect.width = x_max - x_min;
     roi->rect.height = y_max - y_min;
+}
+
+/*===========================================================================
+ * FUNCTION   : cropRegionToZoom
+ *
+ * DESCRIPTION: find the zoom ratio of the backend that keeps all of a crop
+ *              region in view
+ *
+ * PARAMETERS :
+ *   @cropRegion : crop region in active array coordinates
+ *
+ * RETURN     : index in the zoom ratio table of the capabilities
+ *
+ *==========================================================================*/
+int32_t QCamera3HardwareInterface::cropRegionToZoom(const cam_crop_region_t *cropRegion)
+{
+    const cam_capability_t *caps = gCamCapability[mCameraId];
+    int64_t ratio, ratio_h;
+    int32_t zoom = 0;
+
+    if (cropRegion->width <= 0 || cropRegion->height <= 0)
+        return 0;
+
+    /* The ratios in the table are in percent, the first one 100 */
+    ratio = (int64_t)caps->active_array_size.width * 100 / cropRegion->width;
+    ratio_h = (int64_t)caps->active_array_size.height * 100 / cropRegion->height;
+    if (ratio_h < ratio)
+        ratio = ratio_h;
+
+    for (int32_t i = 1; i < caps->zoom_ratio_tbl_cnt; i++) {
+        if (caps->zoom_ratio_tbl[i] > ratio)
+            break;
+        zoom = i;
+    }
+    return zoom;
 }
 
 /*===========================================================================
@@ -5438,9 +5482,19 @@ int QCamera3HardwareInterface::translateToHalMetadata
             frame_settings.find(ANDROID_SCALER_CROP_REGION).data.i32[2];
         scalerCropRegion.height =
             frame_settings.find(ANDROID_SCALER_CROP_REGION).data.i32[3];
-        rc = AddSetMetaEntryToBatch(hal_metadata,
-                CAM_INTF_META_SCALER_CROP_REGION,
-                sizeof(scalerCropRegion), &scalerCropRegion);
+        /*
+         * The crop region is in active array coordinates, but the ISP
+         * takes a crop window in the coordinates of the sensor output,
+         * which is smaller in the binned sensor modes, and would then
+         * scale down twice as much as it should and drop frames. Ask
+         * for the same field of view as a zoom ratio instead, which the
+         * ISP applies to whatever the sensor outputs.
+         */
+        int32_t zoom = cropRegionToZoom(&scalerCropRegion);
+        rc = AddSetMetaEntryToBatch(hal_metadata, CAM_INTF_PARM_ZOOM,
+                sizeof(zoom), &zoom);
+        mCropRegion = scalerCropRegion;
+        mCropRegionSet = true;
         scalerCropSet = true;
     }
 

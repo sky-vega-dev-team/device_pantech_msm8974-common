@@ -123,6 +123,7 @@ public:
     static void convertFromRegions(cam_area_t* roi, const camera_metadata_t *settings,
                                    uint32_t tag);
     static bool resetIfNeededROI(cam_area_t* roi, const cam_crop_region_t* scalerCropRegion);
+    int32_t cropRegionToZoom(const cam_crop_region_t *cropRegion);
     static void convertLandmarks(cam_face_detection_info_t face, int32_t* landmarks);
     static void postproc_channel_cb_routine(mm_camera_super_buf_t *recvd_frame,
                                             void *userdata);
@@ -233,6 +234,9 @@ private:
      //First request yet to be processed after configureStreams
     bool mFirstRequest;
     bool mRepeatingRequest;
+    /* Last ANDROID_SCALER_CROP_REGION asked for, reported back in results */
+    cam_crop_region_t mCropRegion;
+    bool mCropRegionSet;
     QCamera3HeapMemory *mParamHeap;
     metadata_buffer_t* mParameters;
     metadata_buffer_t* mPrevParameters;
