@@ -27,14 +27,13 @@ vendor/bin/btnvtool
 vendor/lib/libbtnv.so
 
 # Camera
-lib/libchromatix_imx135_liveshot.so
-lib/libchromatix_imx214_liveshot.so
-lib/libchromatix_imx214_zsl.so
-lib/libchromatix_s5k6b2yx_common.so
-lib/libchromatix_s5k6b2yx_default_video.so
-lib/libchromatix_s5k6b2yx_preview.so
-lib/libchromatix_s5k6b2yx_vt.so
-lib/libchromatix_s5k6b2yx_vt_common.so
+lib/libchromatix_imx135_liveshot.so:vendor/lib/libchromatix_imx135_liveshot.so
+lib/libchromatix_imx214_zsl.so:vendor/lib/libchromatix_imx214_zsl.so
+lib/libchromatix_s5k6b2yx_common.so:vendor/lib/libchromatix_s5k6b2yx_common.so
+lib/libchromatix_s5k6b2yx_default_video.so:vendor/lib/libchromatix_s5k6b2yx_default_video.so
+lib/libchromatix_s5k6b2yx_preview.so:vendor/lib/libchromatix_s5k6b2yx_preview.so
+lib/libchromatix_s5k6b2yx_vt.so:vendor/lib/libchromatix_s5k6b2yx_vt.so
+lib/libchromatix_s5k6b2yx_vt_common.so:vendor/lib/libchromatix_s5k6b2yx_vt_common.so
 vendor/lib/libchromatix_imx134_common.so
 vendor/lib/libchromatix_imx134_default_video.so
 vendor/lib/libchromatix_imx134_hfr_120.so
