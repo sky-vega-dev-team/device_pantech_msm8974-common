@@ -33,6 +33,18 @@
  *   the same time, which corrupts them. Run the functions that use the lists
  *   one at a time.
  *
+ * - Both threads pass the start of frame on to the session. It expects two
+ *   of them for each frame of a split stream, and sends the metadata and the
+ *   start of frame to the other modules on every second one. But it takes
+ *   the next parameters off its queue on each one, so two for a frame, and
+ *   the frame the first asks for is never made: it applies the requests of
+ *   the camera HAL to the frames to make, and loses one of two that come
+ *   close together. The HAL keeps waiting for those frames, so it can never
+ *   finish its requests, and does when the camera stops repeating them,
+ *   after a picture. Take the parameters off the queue on the first start of
+ *   each frame of a session only; the kernel gives both VFEs the same frame
+ *   numbers.
+ *
  * Load as a shim of the module. It calls these functions through its own
  * PLT, so point those slots at wrappers.
  */
@@ -169,6 +181,7 @@ enum {
     REPORT_STORED_PARAM,
     STORE_NEW_META,
     REPORT_STORED_META,
+    QUEUE_POP_HEAD,
     NUM_HOOKS,
 };
 
@@ -205,7 +218,75 @@ static void *bf_stats_open(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint3
         return ret;                                                                        \
     }
 
-LOCKED(notify_sof, NOTIFY_SOF)
+/* The event notify_sof gets: the session and a pointer to the frame number */
+#define SOF_SESSION 0
+#define SOF_FRAME 3
+#define MAX_SESSIONS 4
+#define SOF_RESTART 30
+
+static struct {
+    uint32_t session;
+    uint32_t frame;
+} last_sof[MAX_SESSIONS];
+
+/* Whether this start of frame was passed on already, and note it if not */
+static int seen_sof(uint32_t session, uint32_t frame)
+{
+    int i, free_slot = -1;
+
+    for (i = 0; i < MAX_SESSIONS; i++) {
+        if (last_sof[i].session == session) {
+            /*
+             * The thread of one VFE can fall behind the other by a frame, so
+             * a start of frame older than the last is one passed on already.
+             * One far older is from a stream started again.
+             */
+            if (frame <= last_sof[i].frame && last_sof[i].frame - frame < SOF_RESTART)
+                return 1;
+            last_sof[i].frame = frame;
+            return 0;
+        }
+        if (!last_sof[i].session && free_slot < 0)
+            free_slot = i;
+    }
+    if (free_slot < 0)
+        free_slot = session % MAX_SESSIONS;
+    last_sof[free_slot].session = session;
+    last_sof[free_slot].frame = frame;
+    return 0;
+}
+
+/*
+ * Set while notify_sof handles a start of frame passed on already. Its first
+ * call of mct_queue_pop_head, before any other, takes the parameters.
+ */
+static __thread int skip_pop;
+
+static uint64_t notify_sof(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e,
+        uint32_t f, uint32_t g, uint32_t h)
+{
+    const uint32_t *ev = (const uint32_t *)(uintptr_t)b;
+    uint64_t ret;
+
+    pthread_mutex_lock(&list_lock);
+    skip_pop = ev && ev[SOF_FRAME] &&
+            seen_sof(ev[SOF_SESSION], *(const uint32_t *)(uintptr_t)ev[SOF_FRAME]);
+    ret = orig[NOTIFY_SOF](a, b, c, d, e, f, g, h);
+    skip_pop = 0;
+    pthread_mutex_unlock(&list_lock);
+    return ret;
+}
+
+static uint64_t queue_pop_head(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e,
+        uint32_t f, uint32_t g, uint32_t h)
+{
+    if (skip_pop) {
+        skip_pop = 0;
+        return 0;
+    }
+    return orig[QUEUE_POP_HEAD](a, b, c, d, e, f, g, h);
+}
+
 LOCKED(get_frame_number, GET_FRAME_NUMBER)
 LOCKED(set_super_param, SET_SUPER_PARAM)
 LOCKED(store_new_parm, STORE_NEW_PARM)
@@ -215,7 +296,7 @@ LOCKED(report_stored_meta, REPORT_STORED_META)
 
 static const struct {
     const char *name;
-    ElfW(Addr) offset; /* where the slot points in the M4B30X module */
+    ElfW(Addr) offset; /* where the slot points in the M4B30X module, if in it */
     void *wrapper;
 } hooks[NUM_HOOKS] = {
     [BF_STATS_OPEN] = { "bf_stats_open", 0x2ee65, bf_stats_open },
@@ -226,6 +307,8 @@ static const struct {
     [REPORT_STORED_PARAM] = { "isp_ch_util_report_stored_param", 0x371e5, report_stored_param },
     [STORE_NEW_META] = { "isp_ch_util_store_new_meta", 0x3726d, store_new_meta },
     [REPORT_STORED_META] = { "isp_ch_util_report_stored_meta", 0x37345, report_stored_meta },
+    /* in another library, not checked */
+    [QUEUE_POP_HEAD] = { "mct_queue_pop_head", 0, queue_pop_head },
 };
 
 struct module_info {
@@ -315,7 +398,7 @@ __attribute__((constructor)) static void isp_dual_shim_init(void)
 
     /* Make sure this is the module the offsets were taken from */
     for (h = 0; h < NUM_HOOKS; h++) {
-        if (*slots[h] != m.base + hooks[h].offset) {
+        if (hooks[h].offset && *slots[h] != m.base + hooks[h].offset) {
             ALOGE("unknown %s, not hooking it", MODULE_NAME);
             return;
         }
