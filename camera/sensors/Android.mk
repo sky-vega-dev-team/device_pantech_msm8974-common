@@ -15,7 +15,7 @@ LOCAL_SRC_FILES := \
     $(1)/data/$(TARGET_DEVICE)/$(1)_lib.c
 LOCAL_C_INCLUDES := $$(LOCAL_PATH)/include
 LOCAL_HEADER_LIBRARIES := generated_kernel_headers
-LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_SHARED_LIBRARIES := libdl liblog
 LOCAL_CXX_STL := none
 LOCAL_CFLAGS := -Wall -Werror -fvisibility=hidden
 LOCAL_MODULE_TAGS := optional

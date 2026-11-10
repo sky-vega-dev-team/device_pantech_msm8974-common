@@ -16,7 +16,9 @@
 
 #define LOG_TAG "sensor_exposure"
 
+#include <dlfcn.h>
 #include <errno.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/ioctl.h>
@@ -32,8 +34,12 @@
 /* Read by the HAL, see publish_output_size */
 #define SENSOR_OUTPUT_PROP "vendor.camera.sensor.output"
 
-/* Set by the HAL, see apply_ois_mode */
+/* Set by the HAL, see apply_ois_mode and follow_full_size */
 #define HAL_VIDEO_PROP "vendor.camera.hal.video"
+#define HAL_FULL_SIZE_PROP "vendor.camera.hal.full_size"
+
+/* The highest pixel clock one VFE of the MSM8974PRO-AA takes */
+#define VFE_MAX_PIXEL_CLK 320000000
 
 /* Frames after the start to set the OIS mode once more */
 #define OIS_MODE_RETRY_FRAME 10
@@ -65,6 +71,8 @@ static struct {
     int32_t ois_mode;
     uint32_t frames;
 } st;
+
+static void full_size_start(void);
 
 void sensor_exposure_reset(void)
 {
@@ -349,6 +357,7 @@ static int32_t set_subdev_fd(int32_t fd)
         return -1;
     }
     st.fd = fd;
+    full_size_start();
     return 0;
 }
 
@@ -361,6 +370,94 @@ static int32_t get_gains(uint32_t *gains)
     gains[0] = st.req_gain & 0xffff;
     gains[1] = st.req_gain >> 16;
     return 0;
+}
+
+/*
+ * The hammerhead sensor module takes the first resolution that fits a
+ * stream, and the first one of all for a full size snapshot, so the
+ * generator puts the full size mode that runs fastest first. When it needs
+ * both VFEs, it would then also be taken for preview and video that a binned
+ * mode serves at the same rate on one VFE, at a lower rate in the end, as the
+ * CPP cannot keep up with full size frames for them. The HAL says in a
+ * property whether a session has a full size stream; while it has none, make
+ * the first mode look slower than the others, so that the module passes it
+ * over, until the next session.
+ */
+#define FULL_SIZE_STANDBY_FPS 15.0f
+
+static float full_size_fps;
+
+static int full_size_needs_care(void)
+{
+    struct sensor_lib_out_info_array *out = sensor_lib_ptr.out_info_array;
+    uint16_t i;
+
+    if (!out || out->size < 2)
+        return 0;
+    for (i = 1; i < out->size; i++) {
+        if (out->out_info[i].x_output > out->out_info[0].x_output ||
+                out->out_info[i].y_output > out->out_info[0].y_output)
+            return 0;
+    }
+    if (out->out_info[0].op_pixel_clk <= VFE_MAX_PIXEL_CLK)
+        return 0;
+    for (i = 1; i < out->size; i++)
+        if (out->out_info[i].op_pixel_clk <= VFE_MAX_PIXEL_CLK &&
+                out->out_info[i].max_fps >= out->out_info[0].max_fps)
+            return 1;
+    return 0;
+}
+
+static void follow_full_size(void)
+{
+    char value[PROP_VALUE_MAX] = "";
+    struct sensor_lib_out_info_t *first = &sensor_lib_ptr.out_info_array->out_info[0];
+
+    __system_property_get(HAL_FULL_SIZE_PROP, value);
+    /* Until the HAL says otherwise, as when the daemon reads the modes */
+    first->max_fps = value[0] == '0' ? FULL_SIZE_STANDBY_FPS : full_size_fps;
+}
+
+static void *full_size_thread(void *arg)
+{
+    uint32_t serial = 0;
+
+    (void)arg;
+    for (;;) {
+        follow_full_size();
+        /* Any property change; the first wait returns at once */
+        __system_property_wait(NULL, serial, &serial, NULL);
+    }
+    return NULL;
+}
+
+/*
+ * Started once the sensor is used. The daemon loads the library of every
+ * sensor it probes and unloads those that do not match, so keep this one
+ * loaded for the thread.
+ */
+static void full_size_start(void)
+{
+    static int started;
+    pthread_t thread;
+    Dl_info info;
+
+    if (started)
+        return;
+    started = 1;
+    if (!full_size_needs_care())
+        return;
+    if (!dladdr((void *)full_size_start, &info) || !info.dli_fname ||
+            !dlopen(info.dli_fname, RTLD_NOW | RTLD_NODELETE)) {
+        ALOGE("%s: could not keep the library loaded", __func__);
+        return;
+    }
+    full_size_fps = sensor_lib_ptr.out_info_array->out_info[0].max_fps;
+    follow_full_size();
+    if (pthread_create(&thread, NULL, full_size_thread, NULL))
+        ALOGE("%s: no thread to follow %s", __func__, HAL_FULL_SIZE_PROP);
+    else
+        pthread_detach(thread);
 }
 
 sensor_exposure_table_t sensor_exposure_func_table = {

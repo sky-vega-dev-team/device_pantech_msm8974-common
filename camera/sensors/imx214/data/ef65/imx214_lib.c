@@ -186,13 +186,13 @@ static struct sensor_lib_reg_settings_array imx214_init_settings_array = {
     .size = 1,
 };
 
-static struct msm_camera_i2c_reg_array imx214_res_settings_array_1_array[] = {
+static struct msm_camera_i2c_reg_array imx214_res_settings_array_0_array[] = {
     { 0x0114, 0x0003, 0 },
     { 0x0220, 0x0000, 0 },
     { 0x0221, 0x0011, 0 },
     { 0x0222, 0x0001, 0 },
     { 0x0340, 0x000c, 0 },
-    { 0x0341, 0x0058, 0 },
+    { 0x0341, 0x0078, 0 },
     { 0x0342, 0x0013, 0 },
     { 0x0343, 0x0090, 0 },
     { 0x0344, 0x0000, 0 },
@@ -234,12 +234,12 @@ static struct msm_camera_i2c_reg_array imx214_res_settings_array_1_array[] = {
     { 0x0303, 0x0002, 0 },
     { 0x0305, 0x0003, 0 },
     { 0x0306, 0x0000, 0 },
-    { 0x0307, 0x004b, 0 },
+    { 0x0307, 0x0096, 0 },
     { 0x0309, 0x000a, 0 },
     { 0x030b, 0x0001, 0 },
     { 0x0310, 0x0000, 0 },
-    { 0x0820, 0x0009, 0 },
-    { 0x0821, 0x0060, 0 },
+    { 0x0820, 0x0012, 0 },
+    { 0x0821, 0x00c0, 0 },
     { 0x0822, 0x0000, 0 },
     { 0x0823, 0x0000, 0 },
     { 0x3a03, 0x0008, 0 },
@@ -252,7 +252,7 @@ static struct msm_camera_i2c_reg_array imx214_res_settings_array_1_array[] = {
     { 0x3011, 0x0000, 0 },
     { 0x3013, 0x0001, 0 },
     { 0x0202, 0x000c, 0 },
-    { 0x0203, 0x004e, 0 },
+    { 0x0203, 0x006e, 0 },
     { 0x0224, 0x0001, 0 },
     { 0x0225, 0x00f4, 0 },
     { 0x0204, 0x0000, 0 },
@@ -541,13 +541,13 @@ static struct msm_camera_i2c_reg_array imx214_res_settings_array_4_array[] = {
     { 0xae21, 0x005c, 0 },
 };
 
-static struct msm_camera_i2c_reg_array imx214_res_settings_array_0_array[] = {
+static struct msm_camera_i2c_reg_array imx214_res_settings_array_1_array[] = {
     { 0x0114, 0x0003, 0 },
     { 0x0220, 0x0000, 0 },
     { 0x0221, 0x0011, 0 },
     { 0x0222, 0x0001, 0 },
     { 0x0340, 0x000c, 0 },
-    { 0x0341, 0x0078, 0 },
+    { 0x0341, 0x0058, 0 },
     { 0x0342, 0x0013, 0 },
     { 0x0343, 0x0090, 0 },
     { 0x0344, 0x0000, 0 },
@@ -589,12 +589,12 @@ static struct msm_camera_i2c_reg_array imx214_res_settings_array_0_array[] = {
     { 0x0303, 0x0002, 0 },
     { 0x0305, 0x0003, 0 },
     { 0x0306, 0x0000, 0 },
-    { 0x0307, 0x0096, 0 },
+    { 0x0307, 0x004b, 0 },
     { 0x0309, 0x000a, 0 },
     { 0x030b, 0x0001, 0 },
     { 0x0310, 0x0000, 0 },
-    { 0x0820, 0x0012, 0 },
-    { 0x0821, 0x00c0, 0 },
+    { 0x0820, 0x0009, 0 },
+    { 0x0821, 0x0060, 0 },
     { 0x0822, 0x0000, 0 },
     { 0x0823, 0x0000, 0 },
     { 0x3a03, 0x0008, 0 },
@@ -607,7 +607,7 @@ static struct msm_camera_i2c_reg_array imx214_res_settings_array_0_array[] = {
     { 0x3011, 0x0000, 0 },
     { 0x3013, 0x0001, 0 },
     { 0x0202, 0x000c, 0 },
-    { 0x0203, 0x006e, 0 },
+    { 0x0203, 0x004e, 0 },
     { 0x0224, 0x0001, 0 },
     { 0x0225, 0x00f4, 0 },
     { 0x0204, 0x0000, 0 },
@@ -632,7 +632,7 @@ static struct msm_camera_i2c_reg_array imx214_res_settings_array_0_array[] = {
 
 static struct msm_camera_i2c_reg_setting imx214_res_settings_array_settings[] = {
     {
-        .reg_setting = imx214_res_settings_array_1_array,
+        .reg_setting = imx214_res_settings_array_0_array,
         .size = 86,
         .addr_type = MSM_CAMERA_I2C_WORD_ADDR,
         .data_type = MSM_CAMERA_I2C_BYTE_DATA,
@@ -660,7 +660,7 @@ static struct msm_camera_i2c_reg_setting imx214_res_settings_array_settings[] = 
         .delay = 0,
     },
     {
-        .reg_setting = imx214_res_settings_array_0_array,
+        .reg_setting = imx214_res_settings_array_1_array,
         .size = 86,
         .addr_type = MSM_CAMERA_I2C_WORD_ADDR,
         .data_type = MSM_CAMERA_I2C_BYTE_DATA,
@@ -690,16 +690,17 @@ static struct sensor_res_cfg_table_t imx214_res_table = {
 
 static struct sensor_lib_out_info_t imx214_out_info[] = {
     {
-        /* 4208x3120, Pantech mode 8 */
+        /* 4208x3120, Pantech mode 1 */
         .x_output = 4208,
         .y_output = 3120,
         .line_length_pclk = 5008,
-        .frame_length_lines = 3160,
-        .vt_pixel_clk = 240000000,
-        .op_pixel_clk = 240000000,
+        .frame_length_lines = 3192,
+        /* 684000000 in the Pantech library */
+        .vt_pixel_clk = 480000000,
+        .op_pixel_clk = 480000000,
         .binning_factor = 1,
         .min_fps = 5.0f,
-        .max_fps = 15.16f,
+        .max_fps = 30.0f,
     },
     {
         /* 2104x1560, Pantech mode 1 */
@@ -738,17 +739,16 @@ static struct sensor_lib_out_info_t imx214_out_info[] = {
         .max_fps = 121.32f,
     },
     {
-        /* 4208x3120, Pantech mode 1 */
+        /* 4208x3120, Pantech mode 8 */
         .x_output = 4208,
         .y_output = 3120,
         .line_length_pclk = 5008,
-        .frame_length_lines = 3192,
-        /* 684000000 in the Pantech library */
-        .vt_pixel_clk = 480000000,
-        .op_pixel_clk = 480000000,
+        .frame_length_lines = 3160,
+        .vt_pixel_clk = 240000000,
+        .op_pixel_clk = 240000000,
         .binning_factor = 1,
         .min_fps = 5.0f,
-        .max_fps = 30.0f,
+        .max_fps = 15.16f,
     },
 };
 
@@ -757,7 +757,7 @@ static struct sensor_lib_out_info_array imx214_out_info_array = {
     .size = 5,
 };
 
-static struct msm_camera_csi2_params imx214_csi_params_1 = {
+static struct msm_camera_csi2_params imx214_csi_params_0 = {
     .csid_params = {
         .lane_cnt = 4,
         .lane_assign = 0x0000,
@@ -837,7 +837,7 @@ static struct msm_camera_csi2_params imx214_csi_params_4 = {
     },
 };
 
-static struct msm_camera_csi2_params imx214_csi_params_0 = {
+static struct msm_camera_csi2_params imx214_csi_params_1 = {
     .csid_params = {
         .lane_cnt = 4,
         .lane_assign = 0x0000,
@@ -858,11 +858,11 @@ static struct msm_camera_csi2_params imx214_csi_params_0 = {
 };
 
 static struct msm_camera_csi2_params *imx214_csi_params_list[] = {
-    &imx214_csi_params_1,
+    &imx214_csi_params_0,
     &imx214_csi_params_2,
     &imx214_csi_params_3,
     &imx214_csi_params_4,
-    &imx214_csi_params_0,
+    &imx214_csi_params_1,
 };
 
 static struct sensor_lib_csi_params_array imx214_csi_params_array = {
@@ -888,7 +888,7 @@ static struct sensor_lib_chromatix_t imx214_chromatix[] = {
         .common_chromatix = "libchromatix_imx214_common.so",
         .camera_preview_chromatix = "libchromatix_imx214_snapshot.so",
         .camera_snapshot_chromatix = "libchromatix_imx214_snapshot.so",
-        .camcorder_chromatix = "libchromatix_imx214_default_video.so",
+        .camcorder_chromatix = "libchromatix_imx214_video_uhd.so",
     },
     {
         .common_chromatix = "libchromatix_imx214_common.so",
@@ -912,7 +912,7 @@ static struct sensor_lib_chromatix_t imx214_chromatix[] = {
         .common_chromatix = "libchromatix_imx214_common.so",
         .camera_preview_chromatix = "libchromatix_imx214_snapshot.so",
         .camera_snapshot_chromatix = "libchromatix_imx214_snapshot.so",
-        .camcorder_chromatix = "libchromatix_imx214_video_uhd.so",
+        .camcorder_chromatix = "libchromatix_imx214_default_video.so",
     },
 };
 

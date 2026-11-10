@@ -227,15 +227,33 @@ class Gen:
         extra_clk = 4 if e.u32(oinfo + 16) > 0xffff else 0
         stride = 32 + extra_clk
 
-        # The hammerhead module takes the first resolution that fits. Put
-        # the ones above the pixel clock of one VFE last, so that it splits
-        # the frame over both VFEs only when nothing else will do.
+        # The hammerhead module takes the first resolution at least as large
+        # and as fast as the streams ask for, and the first one of all for a
+        # full size snapshot. Put the fastest full size mode first, so that
+        # photos run at full resolution and 30 fps, as on the hammerhead; the
+        # module then takes it for any stream it fits at 30 fps, video too.
+        # After it come the ones one VFE takes, then the ones above the pixel
+        # clock of one VFE, for the sizes and rates the first one does not
+        # have. A mode of the same size as a faster one that needs both VFEs
+        # goes last, as a fallback.
         def op_clk(i):
             r = oinfo + stride * i
             return e.u32(r + extra_clk + 12) or e.u32(r + 8)
+
+        def size(i):
+            r = oinfo + stride * i
+            return e.u16(r), e.u16(r + 2)
+
+        def max_fps(i):
+            return e.f32(oinfo + stride * i + extra_clk + 24)
         order = [i for i in range(osize) if i not in omit]
-        order = ([i for i in order if op_clk(i) <= VFE_MAX_PIXEL_CLK] +
-                 [i for i in order if op_clk(i) > VFE_MAX_PIXEL_CLK])
+        single = [i for i in order if op_clk(i) <= VFE_MAX_PIXEL_CLK]
+        dual = [i for i in order if op_clk(i) > VFE_MAX_PIXEL_CLK]
+        slow = [i for i in single
+                if any(size(j) == size(i) and max_fps(j) > max_fps(i) for j in dual)]
+        order = [i for i in single if i not in slow] + dual + slow
+        full = max(order, key=lambda i: (size(i)[0] * size(i)[1], max_fps(i)))
+        order = [full] + [i for i in order if i != full]
 
         so = e.ptr(b + PT['sensor_output'])
         self.emit('static sensor_output_t %s_sensor_output = {' % n)

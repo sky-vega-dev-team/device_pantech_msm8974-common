@@ -322,7 +322,7 @@ static struct sensor_lib_reg_settings_array imx135_init_settings_array = {
     .size = 1,
 };
 
-static struct msm_camera_i2c_reg_array imx135_res_settings_array_1_array[] = {
+static struct msm_camera_i2c_reg_array imx135_res_settings_array_0_array[] = {
     { 0x011e, 0x0013, 0 },
     { 0x011f, 0x0033, 0 },
     { 0x0301, 0x0005, 0 },
@@ -330,8 +330,8 @@ static struct msm_camera_i2c_reg_array imx135_res_settings_array_1_array[] = {
     { 0x0305, 0x000c, 0 },
     { 0x0309, 0x0005, 0 },
     { 0x030b, 0x0001, 0 },
-    { 0x030c, 0x0001, 0 },
-    { 0x030d, 0x009f, 0 },
+    { 0x030c, 0x0002, 0 },
+    { 0x030d, 0x0032, 0 },
     { 0x030e, 0x0001, 0 },
     { 0x3a06, 0x0011, 0 },
     { 0x0108, 0x0003, 0 },
@@ -357,7 +357,7 @@ static struct msm_camera_i2c_reg_array imx135_res_settings_array_1_array[] = {
     { 0x4344, 0x0000, 0 },
     { 0x441c, 0x0001, 0 },
     { 0x0340, 0x000c, 0 },
-    { 0x0341, 0x0046, 0 },
+    { 0x0341, 0x00cc, 0 },
     { 0x0342, 0x0011, 0 },
     { 0x0343, 0x00dc, 0 },
     { 0x0344, 0x0000, 0 },
@@ -392,19 +392,19 @@ static struct msm_camera_i2c_reg_array imx135_res_settings_array_1_array[] = {
     { 0x4086, 0x0000, 0 },
     { 0x4087, 0x0000, 0 },
     { 0x4400, 0x0000, 0 },
-    { 0x0830, 0x0077, 0 },
-    { 0x0831, 0x002f, 0 },
-    { 0x0832, 0x004f, 0 },
-    { 0x0833, 0x002f, 0 },
-    { 0x0834, 0x002f, 0 },
-    { 0x0835, 0x0037, 0 },
-    { 0x0836, 0x00a7, 0 },
-    { 0x0837, 0x0037, 0 },
+    { 0x0830, 0x0087, 0 },
+    { 0x0831, 0x003f, 0 },
+    { 0x0832, 0x0067, 0 },
+    { 0x0833, 0x003f, 0 },
+    { 0x0834, 0x003f, 0 },
+    { 0x0835, 0x004f, 0 },
+    { 0x0836, 0x00df, 0 },
+    { 0x0837, 0x0047, 0 },
     { 0x0839, 0x001f, 0 },
     { 0x083a, 0x0017, 0 },
     { 0x083b, 0x0002, 0 },
     { 0x0202, 0x000c, 0 },
-    { 0x0203, 0x0042, 0 },
+    { 0x0203, 0x00c8, 0 },
     { 0x0205, 0x0000, 0 },
     { 0x020e, 0x0001, 0 },
     { 0x020f, 0x0000, 0 },
@@ -754,7 +754,7 @@ static struct msm_camera_i2c_reg_array imx135_res_settings_array_4_array[] = {
     { 0x3800, 0x0000, 0 },
 };
 
-static struct msm_camera_i2c_reg_array imx135_res_settings_array_0_array[] = {
+static struct msm_camera_i2c_reg_array imx135_res_settings_array_1_array[] = {
     { 0x011e, 0x0013, 0 },
     { 0x011f, 0x0033, 0 },
     { 0x0301, 0x0005, 0 },
@@ -762,8 +762,8 @@ static struct msm_camera_i2c_reg_array imx135_res_settings_array_0_array[] = {
     { 0x0305, 0x000c, 0 },
     { 0x0309, 0x0005, 0 },
     { 0x030b, 0x0001, 0 },
-    { 0x030c, 0x0002, 0 },
-    { 0x030d, 0x0032, 0 },
+    { 0x030c, 0x0001, 0 },
+    { 0x030d, 0x009f, 0 },
     { 0x030e, 0x0001, 0 },
     { 0x3a06, 0x0011, 0 },
     { 0x0108, 0x0003, 0 },
@@ -789,7 +789,7 @@ static struct msm_camera_i2c_reg_array imx135_res_settings_array_0_array[] = {
     { 0x4344, 0x0000, 0 },
     { 0x441c, 0x0001, 0 },
     { 0x0340, 0x000c, 0 },
-    { 0x0341, 0x00cc, 0 },
+    { 0x0341, 0x0046, 0 },
     { 0x0342, 0x0011, 0 },
     { 0x0343, 0x00dc, 0 },
     { 0x0344, 0x0000, 0 },
@@ -824,19 +824,19 @@ static struct msm_camera_i2c_reg_array imx135_res_settings_array_0_array[] = {
     { 0x4086, 0x0000, 0 },
     { 0x4087, 0x0000, 0 },
     { 0x4400, 0x0000, 0 },
-    { 0x0830, 0x0087, 0 },
-    { 0x0831, 0x003f, 0 },
-    { 0x0832, 0x0067, 0 },
-    { 0x0833, 0x003f, 0 },
-    { 0x0834, 0x003f, 0 },
-    { 0x0835, 0x004f, 0 },
-    { 0x0836, 0x00df, 0 },
-    { 0x0837, 0x0047, 0 },
+    { 0x0830, 0x0077, 0 },
+    { 0x0831, 0x002f, 0 },
+    { 0x0832, 0x004f, 0 },
+    { 0x0833, 0x002f, 0 },
+    { 0x0834, 0x002f, 0 },
+    { 0x0835, 0x0037, 0 },
+    { 0x0836, 0x00a7, 0 },
+    { 0x0837, 0x0037, 0 },
     { 0x0839, 0x001f, 0 },
     { 0x083a, 0x0017, 0 },
     { 0x083b, 0x0002, 0 },
     { 0x0202, 0x000c, 0 },
-    { 0x0203, 0x00c8, 0 },
+    { 0x0203, 0x0042, 0 },
     { 0x0205, 0x0000, 0 },
     { 0x020e, 0x0001, 0 },
     { 0x020f, 0x0000, 0 },
@@ -864,7 +864,7 @@ static struct msm_camera_i2c_reg_array imx135_res_settings_array_0_array[] = {
 
 static struct msm_camera_i2c_reg_setting imx135_res_settings_array_settings[] = {
     {
-        .reg_setting = imx135_res_settings_array_1_array,
+        .reg_setting = imx135_res_settings_array_0_array,
         .size = 105,
         .addr_type = MSM_CAMERA_I2C_WORD_ADDR,
         .data_type = MSM_CAMERA_I2C_BYTE_DATA,
@@ -892,7 +892,7 @@ static struct msm_camera_i2c_reg_setting imx135_res_settings_array_settings[] = 
         .delay = 0,
     },
     {
-        .reg_setting = imx135_res_settings_array_0_array,
+        .reg_setting = imx135_res_settings_array_1_array,
         .size = 105,
         .addr_type = MSM_CAMERA_I2C_WORD_ADDR,
         .data_type = MSM_CAMERA_I2C_BYTE_DATA,
@@ -922,16 +922,16 @@ static struct sensor_res_cfg_table_t imx135_res_table = {
 
 static struct sensor_lib_out_info_t imx135_out_info[] = {
     {
-        /* 4208x3120, Pantech mode 8 */
+        /* 4208x3120, Pantech mode 1 */
         .x_output = 4208,
         .y_output = 3120,
         .line_length_pclk = 4572,
-        .frame_length_lines = 3142,
-        .vt_pixel_clk = 266000000,
-        .op_pixel_clk = 266000000,
+        .frame_length_lines = 3276,
+        .vt_pixel_clk = 360000000,
+        .op_pixel_clk = 360000000,
         .binning_factor = 1,
         .min_fps = 5.0f,
-        .max_fps = 18.48f,
+        .max_fps = 24.01f,
     },
     {
         /* 2104x1560, Pantech mode 1 */
@@ -970,16 +970,16 @@ static struct sensor_lib_out_info_t imx135_out_info[] = {
         .max_fps = 24.01f,
     },
     {
-        /* 4208x3120, Pantech mode 1 */
+        /* 4208x3120, Pantech mode 8 */
         .x_output = 4208,
         .y_output = 3120,
         .line_length_pclk = 4572,
-        .frame_length_lines = 3276,
-        .vt_pixel_clk = 360000000,
-        .op_pixel_clk = 360000000,
+        .frame_length_lines = 3142,
+        .vt_pixel_clk = 266000000,
+        .op_pixel_clk = 266000000,
         .binning_factor = 1,
         .min_fps = 5.0f,
-        .max_fps = 24.01f,
+        .max_fps = 18.48f,
     },
 };
 
@@ -988,7 +988,7 @@ static struct sensor_lib_out_info_array imx135_out_info_array = {
     .size = 5,
 };
 
-static struct msm_camera_csi2_params imx135_csi_params_1 = {
+static struct msm_camera_csi2_params imx135_csi_params_0 = {
     .csid_params = {
         .lane_cnt = 4,
         .lane_assign = 0x0000,
@@ -1068,7 +1068,7 @@ static struct msm_camera_csi2_params imx135_csi_params_4 = {
     },
 };
 
-static struct msm_camera_csi2_params imx135_csi_params_0 = {
+static struct msm_camera_csi2_params imx135_csi_params_1 = {
     .csid_params = {
         .lane_cnt = 4,
         .lane_assign = 0x0000,
@@ -1089,11 +1089,11 @@ static struct msm_camera_csi2_params imx135_csi_params_0 = {
 };
 
 static struct msm_camera_csi2_params *imx135_csi_params_list[] = {
-    &imx135_csi_params_1,
+    &imx135_csi_params_0,
     &imx135_csi_params_2,
     &imx135_csi_params_3,
     &imx135_csi_params_4,
-    &imx135_csi_params_0,
+    &imx135_csi_params_1,
 };
 
 static struct sensor_lib_csi_params_array imx135_csi_params_array = {
