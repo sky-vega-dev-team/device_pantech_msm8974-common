@@ -134,6 +134,7 @@ PRODUCT_PACKAGES += \
     libmmcamera_rohm_eeprom \
     libmmcamera_rumba_sa_eeprom \
     libmmcamera_s5k6b2yx \
+    libshim_af_tune \
     libshim_atomic \
     libshim_binder \
     libshim_camera_parameters

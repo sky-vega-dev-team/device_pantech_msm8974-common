@@ -198,6 +198,7 @@ TARGET_FS_CONFIG_GEN := $(COMMON_PATH)/config.fs
 
 # Shims
 TARGET_LD_SHIM_LIBS := \
+    /system/vendor/lib/libmmcamera2_sensor_modules.so|libshim_af_tune.so \
     /system/vendor/lib/libmmcamera2_stats_algorithm.so|libshim_atomic.so \
     /system/vendor/lib/hw/camera.msm8974.so|libshim_atomic.so \
     /system/vendor/lib/hw/camera.msm8974.so|libshim_camera_parameters.so \

@@ -45,3 +45,19 @@ include $$(BUILD_SHARED_LIBRARY)
 endef
 
 $(foreach e,$(PANTECH_CAMERA_EEPROMS),$(eval $(call pantech-camera-eeprom,$(e))))
+
+# Actuator tuning of the stock Pantech module, loaded as a shim of the
+# hammerhead sensor module
+include $(CLEAR_VARS)
+LOCAL_MODULE := libshim_af_tune
+LOCAL_SRC_FILES := \
+    actuator/af_tune_shim.c \
+    actuator/data/$(TARGET_DEVICE)/af_tune.c
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/actuator
+LOCAL_SHARED_LIBRARIES := liblog
+LOCAL_CXX_STL := none
+LOCAL_CFLAGS := -Wall -Werror -fvisibility=hidden
+LOCAL_MODULE_TAGS := optional
+LOCAL_32_BIT_ONLY := true
+LOCAL_VENDOR_MODULE := true
+include $(BUILD_SHARED_LIBRARY)
