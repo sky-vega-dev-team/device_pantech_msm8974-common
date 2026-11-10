@@ -59,6 +59,55 @@ void sensor_exposure_reset(void)
     st.fl_factor = FL_FACTOR_ONE;
 }
 
+void sensor_exposure_add_reg(struct msm_camera_i2c_reg_setting *setting, uint16_t addr,
+        uint16_t data)
+{
+    setting->reg_setting[setting->size].reg_addr = addr;
+    setting->reg_setting[setting->size].reg_data = data;
+    setting->reg_setting[setting->size].delay = 0;
+    setting->size++;
+}
+
+void sensor_exposure_add_reg16(struct msm_camera_i2c_reg_setting *setting, uint16_t addr,
+        uint16_t data)
+{
+    sensor_exposure_add_reg(setting, addr, data >> 8);
+    sensor_exposure_add_reg(setting, addr + 1, data & 0xff);
+}
+
+static void add_regs(struct msm_camera_i2c_reg_setting *setting,
+        const struct msm_camera_i2c_reg_setting *from)
+{
+    uint16_t i;
+
+    for (i = 0; i < from->size; i++)
+        sensor_exposure_add_reg(setting, from->reg_setting[i].reg_addr,
+                from->reg_setting[i].reg_data);
+}
+
+int32_t sensor_exposure_begin(struct msm_camera_i2c_reg_setting *setting, uint16_t count)
+{
+    if (!setting || !setting->reg_setting)
+        return -1;
+    if (sensor_lib_ptr.groupon_settings->size + count +
+            sensor_lib_ptr.groupoff_settings->size > SENSOR_EXPOSURE_MAX_REGS) {
+        ALOGE("%s: %u registers do not fit", __func__, count);
+        return -1;
+    }
+
+    setting->size = 0;
+    add_regs(setting, sensor_lib_ptr.groupon_settings);
+    return 0;
+}
+
+void sensor_exposure_end(struct msm_camera_i2c_reg_setting *setting)
+{
+    add_regs(setting, sensor_lib_ptr.groupoff_settings);
+    setting->addr_type = MSM_CAMERA_I2C_WORD_ADDR;
+    setting->data_type = MSM_CAMERA_I2C_BYTE_DATA;
+    setting->delay = 0;
+}
+
 static int32_t calculate_exposure(float real_gain, uint16_t line_count,
         sensor_exposure_info_t *exp_info)
 {

@@ -58,6 +58,19 @@ int32_t sensor_calculate_exposure(float real_gain, uint16_t line_count,
 int32_t sensor_fill_exposure_array(uint32_t gain, uint32_t line,
         uint32_t frame_length_lines, struct msm_camera_i2c_reg_setting *setting);
 
+/*
+ * Helpers for sensor_fill_exposure_array. sensor_exposure_begin checks that
+ * count registers fit between the group hold settings and adds the group
+ * hold on; sensor_exposure_end adds the group hold off.
+ */
+int32_t sensor_exposure_begin(struct msm_camera_i2c_reg_setting *setting, uint16_t count);
+void sensor_exposure_add_reg(struct msm_camera_i2c_reg_setting *setting, uint16_t addr,
+        uint16_t data);
+/* data >> 8 to addr, data & 0xff to addr + 1 */
+void sensor_exposure_add_reg16(struct msm_camera_i2c_reg_setting *setting, uint16_t addr,
+        uint16_t data);
+void sensor_exposure_end(struct msm_camera_i2c_reg_setting *setting);
+
 /* Forget the exposure state; called from <name>_open_lib() */
 void sensor_exposure_reset(void);
 

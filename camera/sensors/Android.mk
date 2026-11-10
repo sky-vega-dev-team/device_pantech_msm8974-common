@@ -4,7 +4,7 @@ LOCAL_PATH := $(call my-dir)
 # The register tables differ between devices and live in
 # <sensor>/data/$(TARGET_DEVICE).
 
-PANTECH_CAMERA_SENSORS := imx214
+PANTECH_CAMERA_SENSORS := imx135 imx214 s5k6b2yx
 
 define pantech-camera-sensor
 include $$(CLEAR_VARS)

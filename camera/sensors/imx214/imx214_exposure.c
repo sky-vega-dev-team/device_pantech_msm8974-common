@@ -66,31 +66,6 @@ int32_t sensor_calculate_exposure(float real_gain, uint16_t line_count,
     return 0;
 }
 
-static void add_reg(struct msm_camera_i2c_reg_setting *setting, uint16_t addr,
-        uint16_t data)
-{
-    setting->reg_setting[setting->size].reg_addr = addr;
-    setting->reg_setting[setting->size].reg_data = data;
-    setting->reg_setting[setting->size].delay = 0;
-    setting->size++;
-}
-
-static void add_regs(struct msm_camera_i2c_reg_setting *setting,
-        const struct msm_camera_i2c_reg_setting *from)
-{
-    uint16_t i;
-
-    for (i = 0; i < from->size; i++)
-        add_reg(setting, from->reg_setting[i].reg_addr, from->reg_setting[i].reg_data);
-}
-
-static void add_reg16(struct msm_camera_i2c_reg_setting *setting, uint16_t addr,
-        uint16_t data)
-{
-    add_reg(setting, addr, data >> 8);
-    add_reg(setting, addr + 1, data & 0xff);
-}
-
 int32_t sensor_fill_exposure_array(uint32_t gain, uint32_t line,
         uint32_t frame_length_lines, struct msm_camera_i2c_reg_setting *setting)
 {
@@ -99,23 +74,14 @@ int32_t sensor_fill_exposure_array(uint32_t gain, uint32_t line,
     uint16_t digital = gain >> 16;
     int i;
 
-    if (!setting || !setting->reg_setting)
-        return -1;
-    if (sensor_lib_ptr.groupon_settings->size + sensor_lib_ptr.groupoff_settings->size +
-            2 * (3 + DIGITAL_GAIN_CHANNELS) > SENSOR_EXPOSURE_MAX_REGS)
+    if (sensor_exposure_begin(setting, 2 * (3 + DIGITAL_GAIN_CHANNELS)) < 0)
         return -1;
 
-    setting->size = 0;
-    add_regs(setting, sensor_lib_ptr.groupon_settings);
-    add_reg16(setting, out->frame_length_lines, frame_length_lines);
-    add_reg16(setting, exp->coarse_int_time_addr, line);
-    add_reg16(setting, exp->global_gain_addr, gain & 0x1ff);
+    sensor_exposure_add_reg16(setting, out->frame_length_lines, frame_length_lines);
+    sensor_exposure_add_reg16(setting, exp->coarse_int_time_addr, line);
+    sensor_exposure_add_reg16(setting, exp->global_gain_addr, gain & 0x1ff);
     for (i = 0; i < DIGITAL_GAIN_CHANNELS; i++)
-        add_reg16(setting, DIGITAL_GAIN_ADDR + 2 * i, digital & 0xfff);
-    add_regs(setting, sensor_lib_ptr.groupoff_settings);
-
-    setting->addr_type = MSM_CAMERA_I2C_WORD_ADDR;
-    setting->data_type = MSM_CAMERA_I2C_BYTE_DATA;
-    setting->delay = 0;
+        sensor_exposure_add_reg16(setting, DIGITAL_GAIN_ADDR + 2 * i, digital & 0xfff);
+    sensor_exposure_end(setting);
     return 0;
 }
