@@ -30,8 +30,14 @@
  *
  * - Each VFE has a thread that handles its start of frame, and both work on
  *   the lists of frame numbers, parameters and metadata of the channel at
- *   the same time, which corrupts them. Run the functions that use the lists
- *   one at a time.
+ *   the same time, which corrupts them, as does clearing them at stream off
+ *   meanwhile. Run the functions that use the lists one at a time. Except
+ *   where the start of frame is passed on to the other modules: the CPP
+ *   module takes its lock there, and a CPP thread holding that lock asks for
+ *   a frame number from the lists, so the two would wait for each other, and
+ *   the camera stop for good at the next stream off. Pass those on one at a
+ *   time too, as the CPP module loses track of its frames otherwise, but
+ *   without holding the lists.
  *
  * - Both threads pass the start of frame on to the session. It expects two
  *   of them for each frame of a split stream, and sends the metadata and the
@@ -96,6 +102,20 @@ static ElfW(Addr) module_base;
 static int (*orig_bf_action)(void *, uint32_t, void *, void *);
 
 static pthread_mutex_t list_lock = PTHREAD_RECURSIVE_MUTEX_INITIALIZER_NP;
+static __thread int list_lock_depth;
+static pthread_mutex_t broadcast_lock = PTHREAD_MUTEX_INITIALIZER;
+
+static void lock_lists(void)
+{
+    pthread_mutex_lock(&list_lock);
+    list_lock_depth++;
+}
+
+static void unlock_lists(void)
+{
+    list_lock_depth--;
+    pthread_mutex_unlock(&list_lock);
+}
 
 static int32_t param(const uint8_t *p, int off)
 {
@@ -175,12 +195,16 @@ static int bf_action(void *ctx, uint32_t action, void *params, void *arg)
 enum {
     BF_STATS_OPEN,
     NOTIFY_SOF,
+    BROADCAST_SOF,
+    BROADCAST_PARM,
+    BROADCAST_ZOOM_CROP,
     GET_FRAME_NUMBER,
     SET_SUPER_PARAM,
     STORE_NEW_PARM,
     REPORT_STORED_PARAM,
     STORE_NEW_META,
     REPORT_STORED_META,
+    CLEAR_SESSION_DATA,
     QUEUE_POP_HEAD,
     NUM_HOOKS,
 };
@@ -212,9 +236,9 @@ static void *bf_stats_open(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint3
     {                                                                                      \
         uint64_t ret;                                                                      \
                                                                                            \
-        pthread_mutex_lock(&list_lock);                                                    \
+        lock_lists();                                                                      \
         ret = orig[hook](a, b, c, d, e, f, g, h);                                          \
-        pthread_mutex_unlock(&list_lock);                                                  \
+        unlock_lists();                                                                    \
         return ret;                                                                        \
     }
 
@@ -268,14 +292,36 @@ static uint64_t notify_sof(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint3
     const uint32_t *ev = (const uint32_t *)(uintptr_t)b;
     uint64_t ret;
 
-    pthread_mutex_lock(&list_lock);
+    lock_lists();
     skip_pop = ev && ev[SOF_FRAME] &&
             seen_sof(ev[SOF_SESSION], *(const uint32_t *)(uintptr_t)ev[SOF_FRAME]);
     ret = orig[NOTIFY_SOF](a, b, c, d, e, f, g, h);
     skip_pop = 0;
-    pthread_mutex_unlock(&list_lock);
+    unlock_lists();
     return ret;
 }
+
+/* Pass something on to the other modules without holding the lists */
+#define UNLOCKED(name, hook)                                                                 \
+    static uint64_t name(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e,       \
+            uint32_t f, uint32_t g, uint32_t h)                                            \
+    {                                                                                      \
+        int depth = list_lock_depth, i;                                                    \
+        uint64_t ret;                                                                      \
+                                                                                           \
+        for (i = 0; i < depth; i++)                                                        \
+            unlock_lists();                                                                \
+        pthread_mutex_lock(&broadcast_lock);                                               \
+        ret = orig[hook](a, b, c, d, e, f, g, h);                                          \
+        pthread_mutex_unlock(&broadcast_lock);                                             \
+        for (i = 0; i < depth; i++)                                                        \
+            lock_lists();                                                                  \
+        return ret;                                                                        \
+    }
+
+UNLOCKED(broadcast_sof, BROADCAST_SOF)
+UNLOCKED(broadcast_parm, BROADCAST_PARM)
+UNLOCKED(broadcast_zoom_crop, BROADCAST_ZOOM_CROP)
 
 static uint64_t queue_pop_head(uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e,
         uint32_t f, uint32_t g, uint32_t h)
@@ -293,6 +339,7 @@ LOCKED(store_new_parm, STORE_NEW_PARM)
 LOCKED(report_stored_param, REPORT_STORED_PARAM)
 LOCKED(store_new_meta, STORE_NEW_META)
 LOCKED(report_stored_meta, REPORT_STORED_META)
+LOCKED(clear_session_data, CLEAR_SESSION_DATA)
 
 static const struct {
     const char *name;
@@ -301,12 +348,16 @@ static const struct {
 } hooks[NUM_HOOKS] = {
     [BF_STATS_OPEN] = { "bf_stats_open", 0x2ee65, bf_stats_open },
     [NOTIFY_SOF] = { "isp_ch_util_hw_notify_sof", 0x37735, notify_sof },
+    [BROADCAST_SOF] = { "isp_util_broadcast_sof_msg_to_modules", 0x38b43, broadcast_sof },
+    [BROADCAST_PARM] = { "isp_util_broadcast_parm_msg_to_modules", 0x38bb5, broadcast_parm },
+    [BROADCAST_ZOOM_CROP] = { "isp_util_broadcast_zoom_crop", 0x3a979, broadcast_zoom_crop },
     [GET_FRAME_NUMBER] = { "isp_ch_get_frame_number", 0x3707d, get_frame_number },
     [SET_SUPER_PARAM] = { "isp_set_super_param", 0x33655, set_super_param },
     [STORE_NEW_PARM] = { "isp_ch_util_store_new_parm", 0x37125, store_new_parm },
     [REPORT_STORED_PARAM] = { "isp_ch_util_report_stored_param", 0x371e5, report_stored_param },
     [STORE_NEW_META] = { "isp_ch_util_store_new_meta", 0x3726d, store_new_meta },
     [REPORT_STORED_META] = { "isp_ch_util_report_stored_meta", 0x37345, report_stored_meta },
+    [CLEAR_SESSION_DATA] = { "isp_clear_session_data", 0x3224d, clear_session_data },
     /* in another library, not checked */
     [QUEUE_POP_HEAD] = { "mct_queue_pop_head", 0, queue_pop_head },
 };
