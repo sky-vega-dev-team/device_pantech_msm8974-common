@@ -156,6 +156,60 @@ def halve_output_clock(regs):
     return regs
 
 
+# Registers of the readout of the Sony sensors (SMIA++), 16 bit
+COARSE_INTEGRATION_TIME = 0x0202
+FRAME_LENGTH_LINES = 0x0340
+X_ADDR_START, Y_ADDR_START, X_ADDR_END, Y_ADDR_END = 0x0344, 0x0346, 0x0348, 0x034a
+X_OUTPUT_SIZE, Y_OUTPUT_SIZE = 0x034c, 0x034e
+DIGITAL_CROP_X, DIGITAL_CROP_Y = 0x0408, 0x040a
+DIGITAL_CROP_WIDTH, DIGITAL_CROP_HEIGHT = 0x040c, 0x040e
+BINNING_MODE, BINNING_TYPE = 0x0900, 0x0901  # 8 bit; the type has columns, rows
+# The clock tree, 8 bit
+CLOCK_REGS = [0x0301, 0x0303, 0x0305, 0x0306, 0x0307, 0x0309, OP_SYS_CLK_DIV, 0x0310] + \
+    list(range(LINK_BIT_RATE, LINK_BIT_RATE + 4))
+
+
+def set_reg16(regs, addr, value):
+    for a, v in ((addr, value >> 8), (addr + 1, value & 0xff)):
+        r = [r for r in regs if r[0] == a]
+        if len(r) != 1:
+            raise ValueError('no register %#06x to set' % a)
+        r[0][1] = v
+
+
+def crop_resolution(m, base, clock_regs, pixel_array, then=None):
+    """
+    Turn the resolution setting of mode base into one for mode m: its size
+    read from the middle of the pixel array, its frame length, and the clock
+    tree of clock_regs. then adjusts the result further.
+    """
+    def adjust(regs):
+        regs = [list(r) for r in regs]
+        get = {r[0]: r[1] for r in regs}
+        binning = get[BINNING_TYPE] if get[BINNING_MODE] else 0x11
+        w, h = m['x'] * (binning >> 4), m['y'] * (binning & 0xf)
+        x0 = (pixel_array[0] - w) // 2 & ~1
+        y0 = (pixel_array[1] - h) // 2 & ~1
+        coarse_margin = base['fll'] - (get[COARSE_INTEGRATION_TIME] << 8 |
+                                       get[COARSE_INTEGRATION_TIME + 1])
+        for addr, v in ((X_ADDR_START, x0), (Y_ADDR_START, y0),
+                        (X_ADDR_END, x0 + w - 1), (Y_ADDR_END, y0 + h - 1),
+                        (X_OUTPUT_SIZE, m['x']), (Y_OUTPUT_SIZE, m['y']),
+                        (DIGITAL_CROP_X, 0), (DIGITAL_CROP_Y, 0),
+                        (DIGITAL_CROP_WIDTH, m['x']), (DIGITAL_CROP_HEIGHT, m['y']),
+                        (FRAME_LENGTH_LINES, m['fll']),
+                        (COARSE_INTEGRATION_TIME, m['fll'] - coarse_margin)):
+            set_reg16(regs, addr, v)
+        clock = {r[0]: r[1] for r in clock_regs}
+        for r in regs:
+            if r[0] in CLOCK_REGS:
+                r[1] = clock[r[0]]
+        if len([r for r in regs if r[0] in CLOCK_REGS]) != len(CLOCK_REGS):
+            raise ValueError('no clock registers to set')
+        return then(regs) if then else regs
+    return adjust
+
+
 def fps_off(clk, llp, fll, fps):
     """Whether a pixel clock does not give the frame rate of a mode."""
     return abs(clk / (llp * fll) - fps) > fps * 0.05
@@ -198,19 +252,33 @@ class Gen:
         self.emit()
         return '&' + cname
 
-    def kept(self, order, size):
-        """The entries of an array of size entries, one per resolution in order."""
+    def source(self, i, field):
+        """The Pantech entry of a field for resolution i."""
+        d = self.cropped.get(i)
+        return d.get(field + '_from', d['from']) if d else i
+
+    def kept(self, order, size, field):
+        """(resolution, Pantech entry) of an array of size entries, one per resolution in order."""
         # Entries past those of the resolutions stay in place
-        return [i for i in order if i < size] + list(range(self.osize, size))
+        res = [(i, self.source(i, field)) for i in order]
+        return [r for r in res if r[1] < size] + [(i, i) for i in range(self.osize, size)]
+
+    def res_regs(self, i):
+        """The registers of the resolution setting of Pantech mode i."""
+        e = self.e
+        va = e.ptr(e.ptr(self.base + PT['res_settings_array'])) + 20 * i
+        arr = e.ptr(va)
+        return [(e.u16(a), e.u16(a + 2), e.u32(a + 4))
+                for a in (arr + 8 * k for k in range(e.u16(va + 4)))]
 
     def reg_settings_array(self, field, order=None, adjust=None):
         e = self.e
         arr_va = e.ptr(self.base + PT[field])
         sets, size = e.ptr(arr_va), e.u32(arr_va + 4)
         cname = '%s_%s' % (self.n, field)
-        order = range(size) if order is None else self.kept(order, size)
-        bodies = [self.reg_setting(sets + 20 * i, '%s_%d' % (cname, i), (adjust or {}).get(i))
-                  for i in order]
+        order = [(i, i) for i in range(size)] if order is None else self.kept(order, size, field)
+        bodies = [self.reg_setting(sets + 20 * s, '%s_%d' % (cname, i), (adjust or {}).get(i))
+                  for i, s in order]
         size = len(bodies)
         self.emit('static struct msm_camera_i2c_reg_setting %s_settings[] = {' % cname)
         for b in bodies:
@@ -252,12 +320,45 @@ class Gen:
         extra_clk = 4 if e.u32(oinfo + 16) > 0xffff else 0
         stride = 32 + extra_clk
 
-        def line_time(i):
+        def pantech_info(i):
             r = oinfo + stride * i
-            vt, op = e.u32(r + 8), e.u32(r + extra_clk + 12)
-            if fps_off(vt, e.u16(r + 4), e.u16(r + 6), e.f32(r + extra_clk + 24)) and op:
-                vt = op
-            return e.u16(r + 4) / vt
+            x, y, llp, fll = (e.u16(r + 2 * k) for k in range(4))
+            vt = e.u32(r + 8)
+            r += extra_clk
+            m = dict(x=x, y=y, llp=llp, fll=fll, vt=vt, op=e.u32(r + 12),
+                     binning=e.u16(r + 16), min_fps=e.f32(r + 20), max_fps=e.f32(r + 24),
+                     mode=e.u32(r + 28), pantech_vt=None)
+            if fps_off(vt, llp, fll, m['max_fps']) and m['op'] and \
+                    not fps_off(m['op'], llp, fll, m['max_fps']):
+                # The module times frames and exposure with it, and the sensor
+                # runs at the rate the output clock gives
+                m['vt'], m['pantech_vt'] = m['op'], vt
+            return m
+
+        # Resolutions the Pantech library does not have, a binning mode of it
+        # cropped to the middle of the sensor and run at the clock of another
+        # mode, for a size and rate the binning modes do not reach: fewer
+        # lines take less time. They come after the Pantech ones. Each one
+        # names the Pantech modes it is made "from" and takes the clock of
+        # ("clock_from"), its "size" and "max_fps", and may take the CSI,
+        # crop or chromatix entry of another mode ("<field>_from").
+        self.cropped = {}
+        info = {i: pantech_info(i) for i in range(osize)}
+        for k, d in enumerate(extra.get('cropped_resolutions', [])):
+            i = 1000 + k
+            self.cropped[i] = d
+            m = dict(info[d['from']])
+            clk = info[d['clock_from']]
+            m.update(x=d['size'][0], y=d['size'][1], vt=clk['vt'], op=clk['op'],
+                     pantech_vt=None)
+            m['fll'] = int(m['vt'] / (m['llp'] * d['max_fps']))
+            if m['fll'] - m['y'] < info[d['from']]['fll'] - info[d['from']]['y']:
+                raise ValueError('%dx%d does not reach %s fps' % (m['x'], m['y'], d['max_fps']))
+            m['max_fps'] = round(m['vt'] / (m['llp'] * m['fll']), 2)
+            info[i] = m
+
+        def line_time(i):
+            return info[i]['llp'] / info[i]['vt']
 
         # A VFE has to take a line as fast as the sensor sends it. A binning
         # mode sends its lines in a short part of the line time, at an output
@@ -267,10 +368,8 @@ class Gen:
         # the clock, when they still fit in the line time, so that one VFE
         # takes them at a clock it keeps up with.
         halved = set()
-        for i in range(osize):
-            r = oinfo + stride * i
-            op = e.u32(r + extra_clk + 12)
-            if op > VFE_MAX_PIXEL_CLK and e.u16(r) * 2 / op < line_time(i) * 0.9:
+        for i, m in info.items():
+            if m['op'] > VFE_MAX_PIXEL_CLK and m['x'] * 2 / m['op'] < line_time(i) * 0.9:
                 halved.add(i)
 
         # The hammerhead module takes the first resolution at least as large
@@ -283,17 +382,15 @@ class Gen:
         # have. A mode of the same size as a faster one that needs both VFEs
         # goes last, as a fallback.
         def op_clk(i):
-            r = oinfo + stride * i
-            clk = e.u32(r + extra_clk + 12) or e.u32(r + 8)
+            clk = info[i]['op'] or info[i]['vt']
             return clk // 2 if i in halved else clk
 
         def size(i):
-            r = oinfo + stride * i
-            return e.u16(r), e.u16(r + 2)
+            return info[i]['x'], info[i]['y']
 
         def max_fps(i):
-            return e.f32(oinfo + stride * i + extra_clk + 24)
-        order = [i for i in range(osize) if i not in omit]
+            return info[i]['max_fps']
+        order = [i for i in range(osize) if i not in omit] + list(self.cropped)
         single = [i for i in order if op_clk(i) <= VFE_MAX_PIXEL_CLK]
         dual = [i for i in order if op_clk(i) > VFE_MAX_PIXEL_CLK]
         slow = [i for i in single
@@ -405,8 +502,11 @@ class Gen:
         for f in ('start_settings', 'stop_settings', 'groupon_settings', 'groupoff_settings'):
             lib[f] = self.named_reg_setting(f)
         lib['init_settings_array'] = self.reg_settings_array('init_settings_array')
-        lib['res_settings_array'] = self.reg_settings_array(
-            'res_settings_array', order, {i: halve_output_clock for i in halved})
+        adjust = {i: halve_output_clock for i in halved}
+        for i, d in self.cropped.items():
+            adjust[i] = crop_resolution(info[i], info[d['from']], self.res_regs(d['clock_from']),
+                                        extra['pixel_array'], adjust.get(i))
+        lib['res_settings_array'] = self.reg_settings_array('res_settings_array', order, adjust)
 
         rc = e.ptr(b + PT['sensor_res_cfg_table'])
         rtab, rsize = e.ptr(rc), e.u16(rc + 4)
@@ -424,27 +524,27 @@ class Gen:
         self.out_info = []
         self.emit('static struct sensor_lib_out_info_t %s_out_info[] = {' % n)
         for i in order:
-            r = oinfo + stride * i
-            x, y, llp, fll = (e.u16(r + 2 * k) for k in range(4))
-            vt = e.u32(r + 8)
-            r += extra_clk
-            op = e.u32(r + 12)
-            binning, mn, mx = e.u16(r + 16), e.f32(r + 20), e.f32(r + 24)
+            m = info[i]
+            x, y, llp, fll, vt, op = (m[k] for k in ('x', 'y', 'llp', 'fll', 'vt', 'op'))
+            binning, mn, mx = m['binning'], m['min_fps'], m['max_fps']
             self.out_info.append((x, y))
             self.emit('    {')
-            self.emit('        /* %dx%d, Pantech mode %d */' % (x, y, e.u32(r + 28)))
+            if i in self.cropped:
+                d = self.cropped[i]
+                self.emit('        /* %dx%d, Pantech mode %d cropped, at the clock of %dx%d */' % (
+                    x, y, m['mode'], info[d['clock_from']]['x'], info[d['clock_from']]['y']))
+            else:
+                self.emit('        /* %dx%d, Pantech mode %d */' % (x, y, m['mode']))
             self.emit('        .x_output = %d,' % x)
             self.emit('        .y_output = %d,' % y)
             self.emit('        .line_length_pclk = %d,' % llp)
             self.emit('        .frame_length_lines = %d,' % fll)
-            if fps_off(vt, llp, fll, mx) and op and not fps_off(op, llp, fll, mx):
-                # The module times frames and exposure with it, and the sensor
-                # runs at the rate the output clock gives
-                self.emit('        /* %d in the Pantech library */' % vt)
-                vt = op
+            if m['pantech_vt']:
+                self.emit('        /* %d in the Pantech library */' % m['pantech_vt'])
             self.emit('        .vt_pixel_clk = %d,' % vt)
             if i in halved:
-                self.emit('        /* %d in the Pantech library, sent at half of it */' % op)
+                self.emit('        /* %d%s, sent at half of it */' % (
+                    op, '' if i in self.cropped else ' in the Pantech library'))
                 op //= 2
             if not op:
                 # The hammerhead module divides by it to get the readout time
@@ -466,9 +566,9 @@ class Gen:
         # msm_camera_csi2_params: the hammerhead lut params add vc_cfg_size
         ca = e.ptr(b + PT['csi_params_array'])
         cptrs, csize = e.ptr(ca), e.u16(ca + 4)
-        csi_kept = self.kept(order, csize)
-        for i in csi_kept:
-            p = e.ptr(cptrs + 4 * i)
+        csi_kept = self.kept(order, csize, 'csi_params')
+        for i, s in csi_kept:
+            p = e.ptr(cptrs + 4 * s)
             num_cid = e.u8(p + 8)
             vcs = []
             for k in range(num_cid):
@@ -498,7 +598,7 @@ class Gen:
             self.emit('};')
             self.emit()
         self.emit('static struct msm_camera_csi2_params *%s_csi_params_list[] = {' % n)
-        for i in csi_kept:
+        for i, s in csi_kept:
             self.emit('    &%s_csi_params_%d,' % (n, i))
         self.emit('};')
         self.emit()
@@ -511,9 +611,9 @@ class Gen:
         cr = e.ptr(b + PT['crop_params_array'])
         crop, crsize = e.ptr(cr), e.u16(cr + 4)
         self.emit('static struct sensor_crop_parms_t %s_crop_params[] = {' % n)
-        crop_kept = self.kept(order, crsize)
-        for i in crop_kept:
-            self.emit('    { %d, %d, %d, %d },' % tuple(e.u16(crop + 8 * i + 2 * k) for k in range(4)))
+        crop_kept = self.kept(order, crsize, 'crop_params')
+        for i, s in crop_kept:
+            self.emit('    { %d, %d, %d, %d },' % tuple(e.u16(crop + 8 * s + 2 * k) for k in range(4)))
         self.emit('};')
         self.emit()
         self.emit('static struct sensor_lib_crop_params_array %s_crop_params_array = {' % n)
@@ -532,12 +632,12 @@ class Gen:
             first = e.u32(chs)
             stride = next(k for k in range(4, 32, 4) if e.u32(chs + k) == first)
         self.emit('static struct sensor_lib_chromatix_t %s_chromatix[] = {' % n)
-        ch_kept = self.kept(order, max(chsize, osize))
-        for i in ch_kept:
+        ch_kept = self.kept(order, max(chsize, osize), 'chromatix')
+        for i, s in ch_kept:
             names = []
             missing = []
             for k in range(4):
-                p = e.ptr(chs + stride * min(i, chsize - 1) + 4 * k)
+                p = e.ptr(chs + stride * min(s, chsize - 1) + 4 * k)
                 name = e.string(p) if p else None
                 if name in extra.get('chromatix_replace', {}):
                     missing.append(name)
@@ -546,7 +646,7 @@ class Gen:
             self.emit('    {')
             for name in sorted(set(missing)):
                 self.emit('        /* %s is not among the extracted blobs */' % name)
-            if i >= chsize:
+            if s >= chsize:
                 self.emit('        /* Not in the Pantech library, which has fewer'
                           ' chromatix entries than resolutions */')
             for f, v in zip(['common_chromatix', 'camera_preview_chromatix',
