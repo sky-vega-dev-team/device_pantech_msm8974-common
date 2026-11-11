@@ -1,0 +1,7 @@
+cc_binary {
+    name: "camtest",
+    srcs: ["camtest.cpp"],
+    shared_libs: ["libcamera2ndk", "libmediandk", "libnativewindow", "libbinder_ndk", "libEGL", "libGLESv2"],
+    cflags: ["-Wall", "-Wno-unused-parameter"],
+    compile_multilib: "32",
+}
