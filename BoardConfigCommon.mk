@@ -59,6 +59,7 @@ BOARD_DTBTOOL_ARGS := -2
 TARGET_KERNEL_ARCH := arm
 # LZMA_RAMDISK_TARGETS := [boot,recovery]
 TARGET_KERNEL_SOURCE := kernel/pantech/msm8x74
+TARGET_KERNEL_CLANG_COMPILE := false
 
 # Fixes Wifi-Mobile Data toggle issue
 MALLOC_SVELTE := true
