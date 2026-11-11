@@ -1642,6 +1642,34 @@ int QCamera3HardwareInterface::registerStreamBuffers(
     return NO_ERROR;
 }
 
+/*
+ * The daemon picks the sensor mode for the streams when they start, from
+ * the high frame rate mode, and only changes the frame length within that
+ * mode for a frame rate asked for later. Above 30 fps, ask for the high
+ * frame rate mode of the first request, along with its frame rate.
+ */
+void QCamera3HardwareInterface::setHfrMode(const CameraMetadata &meta)
+{
+    int32_t hfr = CAM_HFR_MODE_OFF;
+    cam_fps_range_t fps_range;
+
+    if (!meta.exists(ANDROID_CONTROL_AE_TARGET_FPS_RANGE))
+        return;
+    fps_range.min_fps = meta.find(ANDROID_CONTROL_AE_TARGET_FPS_RANGE).data.i32[0];
+    fps_range.max_fps = meta.find(ANDROID_CONTROL_AE_TARGET_FPS_RANGE).data.i32[1];
+    if (fps_range.max_fps >= 150)
+        hfr = CAM_HFR_MODE_150FPS;
+    else if (fps_range.max_fps >= 120)
+        hfr = CAM_HFR_MODE_120FPS;
+    else if (fps_range.max_fps >= 90)
+        hfr = CAM_HFR_MODE_90FPS;
+    else if (fps_range.max_fps >= 60)
+        hfr = CAM_HFR_MODE_60FPS;
+    AddSetMetaEntryToBatch(mParameters, CAM_INTF_PARM_HFR, sizeof(hfr), &hfr);
+    AddSetMetaEntryToBatch(mParameters, CAM_INTF_PARM_FPS_RANGE,
+            sizeof(fps_range), &fps_range);
+}
+
 /*===========================================================================
  * FUNCTION   : processCaptureRequest
  *
@@ -1717,6 +1745,7 @@ int QCamera3HardwareInterface::processCaptureRequest(
                 sizeof(hal_version), &hal_version);
             AddSetMetaEntryToBatch(mParameters, CAM_INTF_META_CAPTURE_INTENT,
                 sizeof(captureIntent), &captureIntent);
+            setHfrMode(meta);
             mCameraHandle->ops->set_parms(mCameraHandle->camera_handle,
                 mParameters);
         }

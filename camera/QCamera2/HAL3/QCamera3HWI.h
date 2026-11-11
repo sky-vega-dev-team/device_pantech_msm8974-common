@@ -144,6 +144,7 @@ public:
     int configureStreams(camera3_stream_configuration_t *stream_list);
     int registerStreamBuffers(const camera3_stream_buffer_set_t *buffer_set);
     int processCaptureRequest(camera3_capture_request_t *request);
+    void setHfrMode(const CameraMetadata &meta);
     void dump(int fd);
     int flush();
 
