@@ -66,6 +66,8 @@ namespace qcamera {
 #define HAL_VIDEO_PROP "vendor.camera.hal.video"
 #define HAL_FULL_SIZE_PROP "vendor.camera.hal.full_size"
 
+static void clearSessionProps();
+
 cam_capability_t *gCamCapability[MM_CAMERA_MAX_NUM_SENSORS];
 const camera_metadata_t *gStaticMetadata[MM_CAMERA_MAX_NUM_SENSORS];
 
@@ -454,6 +456,7 @@ int QCamera3HardwareInterface::closeCamera()
     rc = mCameraHandle->ops->close_camera(mCameraHandle->camera_handle);
     mCameraHandle = NULL;
     mCameraOpened = false;
+    clearSessionProps();
 
 #ifdef HAS_MULTIMEDIA_HINTS
     if (rc == NO_ERROR) {
@@ -3469,6 +3472,86 @@ void QCamera3HardwareInterface::convertLandmarks(cam_face_detection_info_t face,
 }
 
 #define DATA_PTR(MEM_OBJ,INDEX) MEM_OBJ->getPtr( INDEX )
+/*
+ * The daemon lists video sizes beyond the picture sizes, and the frame rates
+ * of its high frame rate modes, but the HAL builds the stream configurations
+ * from the picture sizes and the frame rate ranges from the plain ones. Add
+ * the video sizes, with the frame duration of the next larger picture size,
+ * and a fixed range for each high frame rate mode.
+ */
+static void addVideoCapabilities(cam_capability_t *cap)
+{
+    static const int32_t hfr_fps[CAM_HFR_MODE_MAX] = { 0, 60, 90, 120, 150 };
+    uint8_t i, j, k;
+
+    for (i = 0; i < cap->video_sizes_tbl_cnt; i++) {
+        cam_dimension_t dim = cap->video_sizes_tbl[i];
+        int64_t duration = 0;
+        bool found = false;
+
+        if (cap->picture_sizes_tbl_cnt >= MAX_SIZES_CNT)
+            break;
+        for (j = 0; j < cap->picture_sizes_tbl_cnt; j++) {
+            cam_dimension_t p = cap->picture_sizes_tbl[j];
+            if (p.width == dim.width && p.height == dim.height)
+                found = true;
+            if (p.width >= dim.width && p.height >= dim.height)
+                duration = cap->picture_min_duration[j];
+        }
+        if (found || !duration)
+            continue;
+        /* Keep the table from largest to smallest */
+        for (j = 0; j < cap->picture_sizes_tbl_cnt; j++)
+            if (cap->picture_sizes_tbl[j].width * cap->picture_sizes_tbl[j].height <
+                    dim.width * dim.height)
+                break;
+        for (k = cap->picture_sizes_tbl_cnt; k > j; k--) {
+            cap->picture_sizes_tbl[k] = cap->picture_sizes_tbl[k - 1];
+            cap->picture_min_duration[k] = cap->picture_min_duration[k - 1];
+            cap->jpeg_stall_durations[k] = cap->jpeg_stall_durations[k - 1];
+        }
+        cap->picture_sizes_tbl[j] = dim;
+        cap->picture_min_duration[j] = duration;
+        cap->jpeg_stall_durations[j] = cap->jpeg_stall_durations[j + 1];
+        cap->picture_sizes_tbl_cnt++;
+    }
+
+    for (i = 0; i < cap->hfr_tbl_cnt; i++) {
+        int32_t fps = cap->hfr_tbl[i].mode < CAM_HFR_MODE_MAX ?
+            hfr_fps[cap->hfr_tbl[i].mode] : 0;
+        bool found = false;
+
+        if (!fps || cap->fps_ranges_tbl_cnt >= MAX_SIZES_CNT)
+            continue;
+        for (j = 0; j < cap->fps_ranges_tbl_cnt; j++)
+            if (cap->fps_ranges_tbl[j].min_fps == fps && cap->fps_ranges_tbl[j].max_fps == fps)
+                found = true;
+        if (found)
+            continue;
+        cap->fps_ranges_tbl[cap->fps_ranges_tbl_cnt].min_fps = fps;
+        cap->fps_ranges_tbl[cap->fps_ranges_tbl_cnt].max_fps = fps;
+        cap->fps_ranges_tbl_cnt++;
+    }
+}
+
+/*
+ * The sensor libraries make the full size mode of a sensor look slower while
+ * a session has no full size stream, and the daemon lists the video sizes and
+ * frame rates the modes allow when it is asked for the capabilities. Say
+ * that no session runs when the camera closes and before the capabilities
+ * are read, and give the libraries a moment to follow.
+ */
+static void clearSessionProps()
+{
+    char value[PROPERTY_VALUE_MAX];
+
+    property_get(HAL_FULL_SIZE_PROP, value, "");
+    property_set(HAL_VIDEO_PROP, "");
+    property_set(HAL_FULL_SIZE_PROP, "");
+    if (value[0])
+        usleep(20000);
+}
+
 /*===========================================================================
  * FUNCTION   : initCapabilities
  *
@@ -3487,6 +3570,7 @@ int QCamera3HardwareInterface::initCapabilities(int cameraId)
     mm_camera_vtbl_t *cameraHandle = NULL;
     QCamera3HeapMemory *capabilityHeap = NULL;
 
+    clearSessionProps();
     cameraHandle = camera_open(cameraId);
     if (!cameraHandle) {
         ALOGE("%s: camera_open failed", __func__);
@@ -3530,6 +3614,7 @@ int QCamera3HardwareInterface::initCapabilities(int cameraId)
     }
     memcpy(gCamCapability[cameraId], DATA_PTR(capabilityHeap,0),
                                         sizeof(cam_capability_t));
+    addVideoCapabilities(gCamCapability[cameraId]);
     rc = 0;
 
 query_failed:
