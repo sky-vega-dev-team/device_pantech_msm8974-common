@@ -63,9 +63,6 @@ TARGET_KERNEL_SOURCE := kernel/pantech/msm8x74
 # Fixes Wifi-Mobile Data toggle issue
 MALLOC_SVELTE := true
 
-# ANT+
-BOARD_ANT_WIRELESS_DEVICE := "vfs-prerelease"
-
 # Audio
 BOARD_USES_ALSA_AUDIO := true
 AUDIO_FEATURE_ENABLED_EXTN_FORMATS := true
