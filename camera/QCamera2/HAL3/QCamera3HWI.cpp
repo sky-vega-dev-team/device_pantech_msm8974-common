@@ -2192,21 +2192,13 @@ int QCamera3HardwareInterface::flush()
 
     mFlush = false;
 
+    /*
+     * Leave the channels stopped: the next request starts them as the first
+     * one after configuring does. The framework flushes before closing the
+     * camera, and starting the streams again there only to stop them takes
+     * more than a second on a large sensor mode.
+     */
     mFirstRequest = true;
-
-    // Start the Streams/Channels
-    if (mMetadataChannel) {
-        /* If content of mStreamInfo is not 0, there is metadata stream */
-        mMetadataChannel->start();
-    }
-    for (List<stream_info_t *>::iterator it = mStreamInfo.begin();
-        it != mStreamInfo.end(); it++) {
-        QCamera3Channel *channel = (QCamera3Channel *)(*it)->stream->priv;
-        channel->start();
-    }
-    if (mSupportChannel) {
-        mSupportChannel->start();
-    }
 
     pthread_mutex_unlock(&mMutex);
     return 0;
