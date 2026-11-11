@@ -25,5 +25,9 @@
     <!-- Restart preview for front camera onPictureTaken -->
     <bool name="front_camera_restart_preview_onPictureTaken">true</bool>
 
+    <!-- Camera1 on the HAL3 lists no ZSL modes, so Snap never gets into ZSL
+         and restarts the preview on every change of the settings -->
+    <string name="pref_camera_zsl_default" translatable="false">off</string>
+
 </resources>
 
