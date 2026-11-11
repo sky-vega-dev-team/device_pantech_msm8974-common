@@ -110,7 +110,6 @@ persist.sys.isUsbOtgEnabled=true
 persist.pantech.usb.version=0
 
 # Google
-ro.com.google.clientidbase=android-pantech
 ro.com.google.clientidbase.ms=android-pantech
 ro.com.google.clientidbase.am=android-pantech
 ro.com.google.clientidbase.gmm=android-pantech

@@ -353,3 +353,6 @@ PRODUCT_PACKAGES += \
 
 # Call the proprietary setup
 $(call inherit-product-if-exists, vendor/pantech/msm8974-common/msm8974-common-vendor.mk)
+
+# GMS
+PRODUCT_GMS_CLIENTID_BASE := android-pantech
