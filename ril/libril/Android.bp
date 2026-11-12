@@ -1,0 +1,42 @@
+//
+// libril of hardware/ril with the RIL v6, v8 and v9 support restored
+// (LineageOS-UL 4c02101): the legacy qcril of msm8974 answers
+// SETUP_DATA_CALL with a v6/v9 data call response, which the libril of S
+// rejects as invalid.
+//
+
+cc_library_shared {
+    name: "libril",
+    vendor: true,
+    srcs: [
+        "ril.cpp",
+        "ril_event.cpp",
+        "RilSapSocket.cpp",
+        "ril_service.cpp",
+        "sap_service.cpp",
+    ],
+    shared_libs: [
+        "liblog",
+        "libutils",
+        "libcutils",
+        "libhardware_legacy",
+        "librilutils",
+        "android.hardware.radio@1.0",
+        "android.hardware.radio@1.1",
+        "libhidlbase",
+    ],
+    static_libs: ["libprotobuf-c-nano-enable_malloc-32bit"],
+    header_libs: ["ril_headers"],
+    export_header_lib_headers: ["ril_headers"],
+    include_dirs: ["external/nanopb-c"],
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Wno-unused-parameter",
+        "-Werror",
+        "-DPB_FIELD_32BIT",
+    ],
+    sanitize: {
+        integer_overflow: true,
+    },
+}

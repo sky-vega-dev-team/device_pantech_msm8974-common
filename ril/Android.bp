@@ -1,0 +1,8 @@
+//
+// RIL bits of msm8974-common, only exported to the msm8974 devices
+// (PRODUCT_SOONG_NAMESPACES): libril replaces the one of hardware/ril
+// (BOARD_PROVIDES_LIBRIL).
+//
+
+soong_namespace {
+}

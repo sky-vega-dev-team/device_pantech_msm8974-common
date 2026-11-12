@@ -165,6 +165,9 @@ TARGET_POWERHAL_MODE_EXT := $(COMMON_PATH)/power/power-mode.cpp
 # QCOM hardware
 BOARD_USES_QCOM_HARDWARE := true
 
+# RIL
+BOARD_PROVIDES_LIBRIL := true
+
 # Recovery
 TARGET_RECOVERY_FSTAB := $(COMMON_PATH)/rootdir/etc/fstab.qcom
 
