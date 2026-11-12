@@ -1,0 +1,7 @@
+cc_binary {
+    name: "qmi_pcscf",
+    srcs: ["qmi_pcscf.c"],
+    shared_libs: ["libdl"],
+    cflags: ["-Wall", "-Werror"],
+    vendor: true,
+}
