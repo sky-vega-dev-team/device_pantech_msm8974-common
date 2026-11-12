@@ -354,4 +354,7 @@
     <!-- Swipe on the fingerprint sensor to show notifications -->
     <bool name="config_supportSystemNavigationKeys">true</bool>
 
+    <!-- VoLTE through phh IMS, enabled per carrier in the carrier config -->
+    <bool name="config_device_volte_available">true</bool>
+
 </resources>

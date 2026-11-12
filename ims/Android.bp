@@ -1,0 +1,42 @@
+//
+// VoLTE of the Korean carriers through phh IMS
+//
+
+sh_binary {
+    name: "init.ims.sh",
+    src: "init.ims.sh",
+    vendor: true,
+}
+
+prebuilt_etc {
+    name: "privapp-permissions-me.phh.ims.xml",
+    src: "privapp-permissions-me.phh.ims.xml",
+    sub_dir: "permissions",
+}
+
+// The Lineage APN list, bind mounted over it by init.target.rc:
+//  - KT, SKT: initial attach on the ims APN (the modem cannot bring up the IMS
+//    PDN by itself after an attach on the internet APN), KT IMS on "IMS"
+//  - LG U+: IMS on "ims", IPv6 only, like the stock terminals
+genrule {
+    name: "msm8974_apns_conf_gen",
+    srcs: [":apns-conf"],
+    out: ["msm8974_apns-conf.xml"],
+    cmd: "sed -e '/mcc=\"450\" mnc=\"08\" carrier=\"KT IA\"/s/ apn=\"[^\"]*\"/ apn=\"ims\"/' " +
+        "-e '/mcc=\"450\" mnc=\"08\" carrier=\"KT IMS\"/s/ apn=\"[^\"]*\"/ apn=\"IMS\"/' " +
+        "-e '/mcc=\"450\" mnc=\"05\" carrier=\"SKT IA\"/s/ apn=\"[^\"]*\"/ apn=\"ims\"/' " +
+        "-e '/mcc=\"450\" mnc=\"06\" carrier=\"LG uplus IMS\"/s/ apn=\"[^\"]*\"/ apn=\"ims\"/' " +
+        "-e '/mcc=\"450\" mnc=\"06\" carrier=\"LG uplus IMS\"/s/ protocol=\"[^\"]*\"/ protocol=\"IPV6\"/' " +
+        "-e '/mcc=\"450\" mnc=\"06\" carrier=\"LG uplus IMS\"/s/ roaming_protocol=\"[^\"]*\"/ roaming_protocol=\"IPV6\"/' " +
+        "$(in) > $(out) && " +
+        "grep -q 'mcc=\"450\" mnc=\"08\" carrier=\"KT IA\" apn=\"ims\"' $(out) && " +
+        "grep -q 'mcc=\"450\" mnc=\"08\" carrier=\"KT IMS\" apn=\"IMS\"' $(out) && " +
+        "grep -q 'mcc=\"450\" mnc=\"05\" carrier=\"SKT IA\" apn=\"ims\"' $(out) && " +
+        "grep -q 'mcc=\"450\" mnc=\"06\" carrier=\"LG uplus IMS\" apn=\"ims\".* protocol=\"IPV6\" roaming_protocol=\"IPV6\"' $(out)",
+}
+
+prebuilt_etc {
+    name: "msm8974_apns-conf.xml",
+    src: ":msm8974_apns_conf_gen",
+    vendor: true,
+}
