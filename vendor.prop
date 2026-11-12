@@ -4,3 +4,7 @@
 
 # VNDK
 ro.vndk.version=current
+
+# RIL
+vendor.rild.libpath=/vendor/lib/libril-qc-qmi-1.so
+vendor.rild.libargs=-d /dev/smd0
