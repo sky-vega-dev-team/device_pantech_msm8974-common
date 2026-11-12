@@ -1,0 +1,6 @@
+#
+# vendor.prop for msm8974
+#
+
+# VNDK
+ro.vndk.version=current
