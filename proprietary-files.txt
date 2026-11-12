@@ -210,9 +210,6 @@ vendor/lib/hw/nfc_nci.msm8974.so
 
 # Perf
 bin/thermal-engine:vendor/bin/thermal-engine
-vendor/bin/mpdecision
-vendor/lib/libqc-opt.so
-vendor/lib/libqti-perfd-client.so
 vendor/lib/libthermalclient.so
 vendor/lib/libthermalioctl.so
 
