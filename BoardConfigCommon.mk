@@ -159,6 +159,9 @@ TARGET_LMKD_STATS_LOG := true
 # Boost
 TARGET_TOUCHBOOST_FREQUENCY := 1200
 
+# Power
+TARGET_POWERHAL_MODE_EXT := $(COMMON_PATH)/power/power-mode.cpp
+
 # QCOM hardware
 BOARD_USES_QCOM_HARDWARE := true
 

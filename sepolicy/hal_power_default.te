@@ -1,0 +1,2 @@
+allow hal_power_default sysfs_mpdecision:dir search;
+allow hal_power_default sysfs_mpdecision:file rw_file_perms;

@@ -1,0 +1,1 @@
+genfscon sysfs /kernel/msm_mpdecision u:object_r:sysfs_mpdecision:s0

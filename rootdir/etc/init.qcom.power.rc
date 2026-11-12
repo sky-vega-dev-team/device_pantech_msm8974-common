@@ -139,10 +139,7 @@ on property:dev.bootcomplete=1
     # Set I/O scheduler
     setprop sys.io.scheduler "bfq"
 
-    # Set perfd properties
-    setprop ro.qualcomm.perf.cores_online 2
-
-    # Start perfd
-    rm /data/system/perfd/default_values
-    setprop vendor.post_boot.parsed 1
+    # Hotplug, the power HAL raises min_cpus_online for launches
     write /sys/kernel/msm_mpdecision/conf/enabled 1
+    chown system system /sys/kernel/msm_mpdecision/conf/min_cpus_online
+    chmod 0664 /sys/kernel/msm_mpdecision/conf/min_cpus_online
