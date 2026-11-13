@@ -16,6 +16,7 @@
 
 #define LOG_TAG "RILC"
 
+#include "ril_ims.h"
 #include <android/hardware/radio/1.1/IRadio.h>
 #include <android/hardware/radio/1.1/IRadioResponse.h>
 #include <android/hardware/radio/1.1/IRadioIndication.h>
@@ -1084,6 +1085,8 @@ Return<void> RadioImpl::setupDataCall(int32_t serial, RadioTechnology radioTechn
 #if VDBG
     RLOGD("setupDataCall: serial %d", serial);
 #endif
+
+    imsBeforeSetupDataCall(dataProfileInfo.apn.c_str());
 
     if (s_vendorFunctions->version >= 4 && s_vendorFunctions->version <= 14) {
         const hidl_string &protocol =
@@ -7112,6 +7115,7 @@ void convertRilDataCallToHal(RIL_Data_Call_Response_v6 *dcResponse,
     dcResult.gateways = convertCharPtrToHidlString(dcResponse->gateways);
     dcResult.pcscf = hidl_string();
     dcResult.mtu = 0;
+    imsFillPcscf(dcResult);
 }
 
 void convertRilDataCallToHal(RIL_Data_Call_Response_v9 *dcResponse,
@@ -7127,6 +7131,7 @@ void convertRilDataCallToHal(RIL_Data_Call_Response_v9 *dcResponse,
     dcResult.gateways = convertCharPtrToHidlString(dcResponse->gateways);
     dcResult.pcscf = convertCharPtrToHidlString(dcResponse->pcscf);
     dcResult.mtu = 0;
+    imsFillPcscf(dcResult);
 }
 
 void convertRilDataCallToHal(RIL_Data_Call_Response_v11 *dcResponse,
@@ -7142,6 +7147,7 @@ void convertRilDataCallToHal(RIL_Data_Call_Response_v11 *dcResponse,
     dcResult.gateways = convertCharPtrToHidlString(dcResponse->gateways);
     dcResult.pcscf = convertCharPtrToHidlString(dcResponse->pcscf);
     dcResult.mtu = dcResponse->mtu;
+    imsFillPcscf(dcResult);
 }
 
 void convertRilDataCallListToHal(void *response, size_t responseLen,

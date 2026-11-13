@@ -12,6 +12,7 @@ cc_library_shared {
         "ril.cpp",
         "ril_event.cpp",
         "RilSapSocket.cpp",
+        "ril_ims.cpp",
         "ril_service.cpp",
         "sap_service.cpp",
     ],
