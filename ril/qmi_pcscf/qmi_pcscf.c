@@ -24,6 +24,7 @@
  *   qmi_pcscf setup <pco> <imcn>      set them on the profiles of the ims APN,
  *                                     clear them on the other profiles
  *   qmi_pcscf runtime [port]          settings of the call on a data port
+ *   qmi_pcscf pcscf <port>            P-CSCF of the call on a data port
  *   qmi_pcscf cache                   store the P-CSCF of the IMS call (IM CN
  *                                     flag or ims APN, IPv4 or IPv6) in
  *                                     persist.vendor.ims.pcscf
@@ -378,6 +379,23 @@ static int append_pcscf(const uint8_t *resp, int len, char *out, size_t size) {
     return n;
 }
 
+/* pcscf <port>: P-CSCF addresses of the call on a data port, space separated */
+static int cmd_pcscf(int port) {
+    char pcscf[PROP_VALUE_MAX] = "";
+    uint8_t resp[4096];
+    int len = sizeof(resp), found = 0;
+
+    if (connect_wds(QMI_QMUX_INSTANCE_BASE + port))
+        return 1;
+    if (!runtime_any_family(resp, &len, 1))
+        found = append_pcscf(resp, len, pcscf, sizeof(pcscf));
+    disconnect_wds();
+    if (!found)
+        return 1;
+    printf("%s\n", pcscf);
+    return 0;
+}
+
 static int cmd_cache(void) {
     char pcscf[PROP_VALUE_MAX] = "";
     int port, found = 0;
@@ -419,7 +437,7 @@ int main(int argc, char **argv) {
     int rc = 2;
 
     if (argc < 2) {
-        fprintf(stderr, "usage: %s list|get <index>|set-ims <index> <pco> [imcn]|setup <pco> <imcn>|runtime [port]|cache\n",
+        fprintf(stderr, "usage: %s list|get <index>|set-ims <index> <pco> [imcn]|setup <pco> <imcn>|runtime [port]|pcscf <port>|cache\n",
                 argv[0]);
         return 2;
     }
@@ -431,6 +449,8 @@ int main(int argc, char **argv) {
         return cmd_runtime(argc > 2 ? atoi(argv[2]) : 0);
     if (!strcmp(argv[1], "cache"))
         return cmd_cache();
+    if (!strcmp(argv[1], "pcscf") && argc > 2)
+        return cmd_pcscf(atoi(argv[2]));
 
     if (connect_wds(QMI_CLIENT_INSTANCE_ANY))
         return 1;
