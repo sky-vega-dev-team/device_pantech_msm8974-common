@@ -25,6 +25,10 @@
  *                                     clear them on the other profiles
  *   qmi_pcscf runtime [port]          settings of the call on a data port
  *   qmi_pcscf pcscf <port>            P-CSCF of the call on a data port
+ *   qmi_pcscf voice-domain <pref>     voice domain preference of the modem, written
+ *                                     when it differs (exit 10)
+ *   qmi_pcscf nas-ssp                 NAS system selection preference (raw TLVs)
+ *   qmi_pcscf nas-set <tlv> <u32> [perm]  one TLV of it, until the next power cycle
  *   qmi_pcscf cache                   store the P-CSCF of the IMS call (IM CN
  *                                     flag or ims APN, IPv4 or IPv6) in
  *                                     persist.vendor.ims.pcscf
@@ -94,6 +98,7 @@ static struct {
                                       int *, int);
     qmi_client_error_type (*release)(qmi_client_type);
     qmi_idl_service_object_type (*wds_object)(int, int, int);
+    qmi_idl_service_object_type (*nas_object)(int, int, int);
 } q;
 
 static qmi_idl_service_object_type wds;
@@ -115,6 +120,7 @@ static int load(void) {
     q.send_raw = dlsym(cci, "qmi_client_send_raw_msg_sync");
     q.release = dlsym(cci, "qmi_client_release");
     q.wds_object = dlsym(svc, "wds_get_service_object_internal_v01");
+    q.nas_object = dlsym(svc, "nas_get_service_object_internal_v01");
     if (!q.xport_register || !q.init_instance || !q.send_raw || !q.release || !q.wds_object) {
         fprintf(stderr, "missing QCCI symbols\n");
         return -1;
@@ -396,6 +402,126 @@ static int cmd_pcscf(int port) {
     return 0;
 }
 
+static int connect_nas(void) {
+    qmi_idl_service_object_type nas = NULL;
+    int minor, rc;
+
+    if (!q.nas_object) {
+        fprintf(stderr, "no NAS service object\n");
+        return -1;
+    }
+    for (minor = 0; minor <= 0xff && !nas; minor++)
+        nas = q.nas_object(0x01, minor, 0x06);
+    if (!nas) {
+        fprintf(stderr, "no NAS service object\n");
+        return -1;
+    }
+    q.xport_register(QMI_CLIENT_INSTANCE_ANY);
+    rc = q.init_instance(nas, QMI_CLIENT_INSTANCE_ANY, NULL, NULL, os_params, QMI_TIMEOUT_MS,
+                         &client);
+    if (rc) {
+        fprintf(stderr, "qmi_client_init_instance(NAS): %d\n", rc);
+        return -1;
+    }
+    return 0;
+}
+
+/*
+ * nas-set <tlv> <u32> [perm]: one TLV of SET_SYSTEM_SELECTION_PREFERENCE, until the
+ * next power cycle, or kept by the modem with perm
+ */
+static int cmd_nas_set(int tlv, uint32_t value, int permanent) {
+    uint8_t req[32], resp[256];
+    uint8_t duration = 0; /* power cycle, not permanent */
+    int len = sizeof(resp), off, rc;
+
+    if (connect_nas())
+        return 1;
+    off = permanent ? 0 : put_tlv(req, 0, 0x17, &duration, 1);
+    off = put_tlv(req, off, (uint8_t)tlv, &value, 4);
+    rc = request(0x0033, req, off, resp, &len, 0);
+    q.release(client);
+    client = NULL;
+    printf("tlv 0x%02x = %u: %s\n", tlv, value, rc ? "failed" : "ok");
+    return rc ? 1 : 0;
+}
+
+/*
+ * voice-domain <pref>: voice domain preference the modem tells the network at
+ * attach (0 CS only, 1 PS only, 2 CS preferred, 3 PS preferred). Only written when
+ * it differs, it is kept by the modem. Exits with 10 when it was changed: the
+ * network only learns it on the next attach.
+ */
+#define NAS_GET_SSP 0x0034
+#define NAS_SET_SSP 0x0033
+#define TLV_SSP_VOICE_DOMAIN_GET 0x20
+#define TLV_SSP_VOICE_DOMAIN_SET 0x23
+
+static int cmd_voice_domain(uint32_t pref) {
+    uint8_t req[16], resp[2048];
+    const uint8_t *v;
+    uint16_t tlen;
+    uint32_t cur;
+    int len = sizeof(resp), rc = 1;
+
+    if (connect_nas())
+        return 1;
+    if (request(NAS_GET_SSP, req, 0, resp, &len, 0))
+        goto out;
+    v = find_tlv(resp, len, TLV_SSP_VOICE_DOMAIN_GET, &tlen);
+    if (!v || tlen != 4) {
+        fprintf(stderr, "no voice domain preference\n");
+        goto out;
+    }
+    cur = v[0] | (v[1] << 8) | (v[2] << 16) | ((uint32_t)v[3] << 24);
+    if (cur == pref) {
+        printf("voice domain preference %u unchanged\n", cur);
+        rc = 0;
+        goto out;
+    }
+    len = sizeof(resp);
+    if (request(NAS_SET_SSP, req, put_tlv(req, 0, TLV_SSP_VOICE_DOMAIN_SET, &pref, 4), resp, &len,
+                0))
+        goto out;
+    printf("voice domain preference %u -> %u\n", cur, pref);
+    rc = 10;
+out:
+    q.release(client);
+    client = NULL;
+    return rc;
+}
+
+/* nas-ssp: raw TLVs of the NAS system selection preference (read only) */
+static int cmd_nas_ssp(void) {
+    qmi_idl_service_object_type nas = NULL;
+    uint8_t resp[2048];
+    int len = sizeof(resp), minor, rc;
+
+    if (!q.nas_object) {
+        fprintf(stderr, "no NAS service object\n");
+        return 1;
+    }
+    for (minor = 0; minor <= 0xff && !nas; minor++)
+        nas = q.nas_object(0x01, minor, 0x06);
+    if (!nas) {
+        fprintf(stderr, "no NAS service object\n");
+        return 1;
+    }
+    q.xport_register(QMI_CLIENT_INSTANCE_ANY);
+    rc = q.init_instance(nas, QMI_CLIENT_INSTANCE_ANY, NULL, NULL, os_params, QMI_TIMEOUT_MS,
+                         &client);
+    if (rc) {
+        fprintf(stderr, "qmi_client_init_instance(NAS): %d\n", rc);
+        return 1;
+    }
+    rc = request(0x0034, NULL, 0, resp, &len, 0);
+    if (!rc)
+        dump_tlvs(resp, len);
+    q.release(client);
+    client = NULL;
+    return rc ? 1 : 0;
+}
+
 static int cmd_cache(void) {
     char pcscf[PROP_VALUE_MAX] = "";
     int port, found = 0;
@@ -437,7 +563,7 @@ int main(int argc, char **argv) {
     int rc = 2;
 
     if (argc < 2) {
-        fprintf(stderr, "usage: %s list|get <index>|set-ims <index> <pco> [imcn]|setup <pco> <imcn>|runtime [port]|pcscf <port>|cache\n",
+        fprintf(stderr, "usage: %s list|get <index>|set-ims <index> <pco> [imcn]|setup <pco> <imcn>|runtime [port]|pcscf <port>|voice-domain <pref>|nas-ssp|nas-set <tlv> <u32> [perm]|cache\n",
                 argv[0]);
         return 2;
     }
@@ -449,6 +575,13 @@ int main(int argc, char **argv) {
         return cmd_runtime(argc > 2 ? atoi(argv[2]) : 0);
     if (!strcmp(argv[1], "cache"))
         return cmd_cache();
+    if (!strcmp(argv[1], "nas-ssp"))
+        return cmd_nas_ssp();
+    if (!strcmp(argv[1], "voice-domain") && argc > 2)
+        return cmd_voice_domain((uint32_t)strtoul(argv[2], NULL, 0));
+    if (!strcmp(argv[1], "nas-set") && argc > 3)
+        return cmd_nas_set((int)strtol(argv[2], NULL, 0), (uint32_t)strtoul(argv[3], NULL, 0),
+                           argc > 4 && !strcmp(argv[4], "perm"));
     if (!strcmp(argv[1], "pcscf") && argc > 2)
         return cmd_pcscf(atoi(argv[2]));
 
