@@ -2,12 +2,6 @@
 // VoLTE of the Korean carriers through phh IMS
 //
 
-sh_binary {
-    name: "init.ims.sh",
-    src: "init.ims.sh",
-    vendor: true,
-}
-
 prebuilt_etc {
     name: "privapp-permissions-me.phh.ims.xml",
     src: "privapp-permissions-me.phh.ims.xml",

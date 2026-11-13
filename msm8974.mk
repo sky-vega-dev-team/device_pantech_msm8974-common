@@ -60,7 +60,6 @@ PRODUCT_SOONG_NAMESPACES += \
 
 # IMS (VoLTE of the Korean carriers through phh IMS, from the vendor tree)
 PRODUCT_PACKAGES += \
-    init.ims.sh \
     msm8974_apns-conf.xml \
     privapp-permissions-me.phh.ims.xml \
     qmi_pcscf

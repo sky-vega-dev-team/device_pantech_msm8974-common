@@ -390,14 +390,3 @@ on property:init.svc.surfaceflinger=stopped
 
 on property:init.svc.surfaceflinger=running
     start ppd
-
-# VoLTE of the Korean carriers through phh IMS: modem profiles and P-CSCF
-service vendor.ims_setup /vendor/bin/init.ims.sh
-    class late_start
-    user root
-    group root radio
-    oneshot
-    disabled
-
-on property:gsm.sim.state=LOADED
-    start vendor.ims_setup
