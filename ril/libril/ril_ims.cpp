@@ -110,6 +110,27 @@ int runQmiPcscf(const char* const argv[], std::string* out) {
 
 }  // namespace
 
+/*
+ * SKT terminates the calls on CS unless the terminal told the network at attach
+ * that it prefers IMS for voice: make the modem prefer PS (it keeps it), then
+ * attach again once so that the network learns it.
+ */
+static void preferPsVoice() {
+    char mccmnc[PROPERTY_VALUE_MAX];
+
+    property_get("gsm.sim.operator.numeric", mccmnc, "");
+    if (strcmp(mccmnc, "45005")) return;
+
+    const char* const argv[] = {kQmiPcscf, "voice-domain", "3", nullptr};
+    int rc = runQmiPcscf(argv, nullptr);
+    if (rc == 10) {
+        RLOGI("Voice domain preference changed to PS preferred, attaching again");
+        property_set("vendor.radio.ims_reattach", "1");
+    } else if (rc) {
+        RLOGE("Could not check the voice domain preference: %d", rc);
+    }
+}
+
 void imsBeforeSetupDataCall(const char* apn) {
     int pco, imcn;
 
@@ -119,6 +140,8 @@ void imsBeforeSetupDataCall(const char* apn) {
     const char* const argv[] = {kQmiPcscf, "setup", pcoStr.c_str(), imcnStr.c_str(), nullptr};
     int rc = runQmiPcscf(argv, nullptr);
     RLOGI("IMS profiles set up (P-CSCF in PCO %d, IM CN %d): %d", pco, imcn, rc);
+
+    preferPsVoice();
 }
 
 void imsFillPcscf(android::hardware::radio::V1_0::SetupDataCallResult& dcResult) {

@@ -390,3 +390,15 @@ on property:init.svc.surfaceflinger=stopped
 
 on property:init.svc.surfaceflinger=running
     start ppd
+
+# libril changed the voice domain preference of the modem (SKT), the network
+# only learns it on the next attach: detach and attach again with the airplane mode
+on property:vendor.radio.ims_reattach=1
+    start vendor.ims_reattach
+
+service vendor.ims_reattach /system/bin/sh -c "sleep 5; cmd connectivity airplane-mode enable; sleep 5; cmd connectivity airplane-mode disable; setprop vendor.radio.ims_reattach 0"
+    user root
+    group root
+    seclabel u:r:su:s0
+    disabled
+    oneshot
