@@ -188,6 +188,11 @@ vendor/lib/libllvm-qcom.so
 vendor/lib/libOpenCL.so
 vendor/lib/libsc-a3xx.so
 
+# IMS - phh IMS, built from https://github.com/rlawoehd187/phh_ims (ef63_volte)
+-priv-app/PhhIms/PhhIms.apk
+-product/overlay/PhhImsOverlay.apk
+lib/librnnoise_jni.so
+
 # Media
 vendor/lib/libffmpeg_extractor.so
 vendor/lib/libffmpeg_omx.so
