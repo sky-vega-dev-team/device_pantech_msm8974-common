@@ -1086,7 +1086,8 @@ Return<void> RadioImpl::setupDataCall(int32_t serial, RadioTechnology radioTechn
     RLOGD("setupDataCall: serial %d", serial);
 #endif
 
-    imsBeforeSetupDataCall(dataProfileInfo.apn.c_str());
+    imsBeforeSetupDataCall(dataProfileInfo.apn.c_str(),
+            (isRoaming ? dataProfileInfo.roamingProtocol : dataProfileInfo.protocol).c_str());
 
     if (s_vendorFunctions->version >= 4 && s_vendorFunctions->version <= 14) {
         const hidl_string &protocol =

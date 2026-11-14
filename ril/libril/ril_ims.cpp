@@ -60,6 +60,15 @@ bool carrierFlags(int* pco, int* imcn) {
     return false;
 }
 
+// PDP type of the WDS profiles: 0 IPv4, 2 IPv6, 3 IPv4v6, -1 unknown
+int pdpType(const char* protocol) {
+    if (!protocol) return -1;
+    if (!strcasecmp(protocol, "IP")) return 0;
+    if (!strcasecmp(protocol, "IPV6")) return 2;
+    if (!strcasecmp(protocol, "IPV4V6")) return 3;
+    return -1;
+}
+
 // Only keeps the addresses: the vendor diag library prints on stdout too
 std::string addressesOnly(const std::string& output) {
     std::istringstream in(output);
@@ -131,15 +140,24 @@ static void preferPsVoice() {
     }
 }
 
-void imsBeforeSetupDataCall(const char* apn) {
+void imsBeforeSetupDataCall(const char* apn, const char* protocol) {
     int pco, imcn;
 
     if (!apn || strcasecmp(apn, "ims") || !carrierFlags(&pco, &imcn)) return;
 
+    /*
+     * qcril reuses its own profiles for the calls of any APN and resets them: the
+     * flags only stick on a profile of the modem, qmi_pcscf creates one for the ims
+     * APN with the PDP type of the call when there is none (LG U+, whose attach APN
+     * is not ims).
+     */
     std::string pcoStr = std::to_string(pco), imcnStr = std::to_string(imcn);
-    const char* const argv[] = {kQmiPcscf, "setup", pcoStr.c_str(), imcnStr.c_str(), nullptr};
+    std::string pdpStr = std::to_string(pdpType(protocol));
+    const char* const argv[] = {kQmiPcscf, "setup", pcoStr.c_str(), imcnStr.c_str(),
+                                pdpStr.c_str(), nullptr};
     int rc = runQmiPcscf(argv, nullptr);
-    RLOGI("IMS profiles set up (P-CSCF in PCO %d, IM CN %d): %d", pco, imcn, rc);
+    RLOGI("IMS profiles set up (P-CSCF in PCO %d, IM CN %d, PDP type %s): %d", pco, imcn,
+          pdpStr.c_str(), rc);
 
     preferPsVoice();
 }
