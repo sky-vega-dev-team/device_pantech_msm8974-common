@@ -57,7 +57,6 @@ on fs
     # Start services for bootanim
     start surfaceflinger
     start bootanim
-    start configstore-hal-1-0
     start gralloc-2-0
     mount_all /vendor/etc/fstab.qcom --late
 
