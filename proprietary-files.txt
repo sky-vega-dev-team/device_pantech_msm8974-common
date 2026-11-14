@@ -169,8 +169,8 @@ etc/firmware/a225_pm4.fw:vendor/etc/firmware/a225_pm4.fw
 etc/firmware/a225p5_pm4.fw:vendor/etc/firmware/a225p5_pm4.fw
 etc/firmware/a300_pfp.fw:vendor/etc/firmware/a300_pfp.fw
 etc/firmware/a300_pm4.fw:vendor/etc/firmware/a300_pm4.fw
-etc/firmware/a330_pfp.fw:vendor/etc/firmware/a330_pfp.fw
-etc/firmware/a330_pm4.fw:vendor/etc/firmware/a330_pm4.fw
+etc/firmware/a330_pfp.fw:vendor/firmware/a330_pfp.fw
+etc/firmware/a330_pm4.fw:vendor/firmware/a330_pm4.fw
 etc/firmware/leia_pfp_470.fw:vendor/etc/firmware/leia_pfp_470.fw
 etc/firmware/leia_pm4_470.fw:vendor/etc/firmware/leia_pm4_470.fw
 vendor/lib/egl/eglsubAndroid.so
