@@ -354,6 +354,12 @@
     <!-- Swipe on the fingerprint sensor to show notifications -->
     <bool name="config_supportSystemNavigationKeys">true</bool>
 
+    <!-- FPC1080 swipe sensor, behind the HIDL fingerprint HAL: Android 12 only
+         registers the HIDL sensors listed here -->
+    <string-array name="config_biometric_sensors" translatable="false">
+        <item>0:2:15</item> <!-- ID0:Fingerprint:Strong -->
+    </string-array>
+
     <!-- VoLTE through phh IMS, enabled per carrier in the carrier config -->
     <bool name="config_device_volte_available">true</bool>
 
