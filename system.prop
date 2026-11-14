@@ -70,6 +70,11 @@ debug.sf.disable_backpressure=1
 debug.sf.disable_client_composition_cache=1
 debug.renderengine.backend=gles
 
+# Input
+# The touch controller reports the lift of the finger up to 46ms after the last
+# movement, keep the fling of these (Android assumes a stop after 40ms).
+ro.input.velocitytracker.pointer_stopped_ms=70
+
 # LMKD
 ro.lmk.critical_upgrade=true
 ro.lmk.downgrade_pressure=60
