@@ -39,6 +39,24 @@ write_headers "ef56 ef59 ef60 ef63 ef65"
 write_makefiles "$MY_DIR"/proprietary-files.txt
 write_makefiles "$MY_DIR"/proprietary-files-qc.txt
 
+# The extract utils only know the apps of app/ and priv-app/: install the RRO
+# of phh IMS to the product overlays.
+cat << EOF >> "$ANDROIDMK"
+
+include \$(CLEAR_VARS)
+LOCAL_MODULE := PhhImsOverlay
+LOCAL_MODULE_OWNER := $VENDOR
+LOCAL_SRC_FILES := proprietary/product/overlay/PhhImsOverlay.apk
+LOCAL_CERTIFICATE := platform
+LOCAL_MODULE_TAGS := optional
+LOCAL_MODULE_CLASS := APPS
+LOCAL_DEX_PREOPT := false
+LOCAL_MODULE_SUFFIX := .apk
+LOCAL_MODULE_PATH := \$(TARGET_OUT_PRODUCT)/overlay
+include \$(BUILD_PREBUILT)
+EOF
+printf '\n%s\n' "PRODUCT_PACKAGES += PhhImsOverlay" >> "$PRODUCTMK"
+
 write_footers
 
 # Reinitialize the helper for device
