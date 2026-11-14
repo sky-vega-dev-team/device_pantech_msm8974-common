@@ -31,8 +31,10 @@
  *   qmi_pcscf delete <index>          delete a profile
  *   qmi_pcscf runtime [port]          settings of the call on a data port
  *   qmi_pcscf pcscf <port>            P-CSCF of the call on a data port
- *   qmi_pcscf voice-domain <pref>     voice domain preference of the modem, written
- *                                     when it differs (exit 10)
+ *   qmi_pcscf voice-domain <pref> [reattach]
+ *                                     voice domain preference of the modem, written
+ *                                     when it differs (exit 10); with reattach, then
+ *                                     radio off and vendor.radio.ims_reattach=1
  *   qmi_pcscf nas-ssp                 NAS system selection preference (raw TLVs)
  *   qmi_pcscf nas-set <tlv> <u32> [perm]  one TLV of it, until the next power cycle
  *   qmi_pcscf cache                   store the P-CSCF of the IMS call (IM CN
@@ -109,6 +111,7 @@ static struct {
     qmi_client_error_type (*release)(qmi_client_type);
     qmi_idl_service_object_type (*wds_object)(int, int, int);
     qmi_idl_service_object_type (*nas_object)(int, int, int);
+    qmi_idl_service_object_type (*dms_object)(int, int, int);
 } q;
 
 static qmi_idl_service_object_type wds;
@@ -131,6 +134,7 @@ static int load(void) {
     q.release = dlsym(cci, "qmi_client_release");
     q.wds_object = dlsym(svc, "wds_get_service_object_internal_v01");
     q.nas_object = dlsym(svc, "nas_get_service_object_internal_v01");
+    q.dms_object = dlsym(svc, "dms_get_service_object_internal_v01");
     if (!q.xport_register || !q.init_instance || !q.send_raw || !q.release || !q.wds_object) {
         fprintf(stderr, "missing QCCI symbols\n");
         return -1;
@@ -504,6 +508,49 @@ static int cmd_nas_set(int tlv, uint32_t value, int permanent) {
     return rc ? 1 : 0;
 }
 
+static int connect_dms(void) {
+    qmi_idl_service_object_type dms = NULL;
+    int minor, rc;
+
+    if (!q.dms_object) {
+        fprintf(stderr, "no DMS service object\n");
+        return -1;
+    }
+    for (minor = 0; minor <= 0xff && !dms; minor++)
+        dms = q.dms_object(0x01, minor, 0x06);
+    if (!dms) {
+        fprintf(stderr, "no DMS service object\n");
+        return -1;
+    }
+    q.xport_register(QMI_CLIENT_INSTANCE_ANY);
+    rc = q.init_instance(dms, QMI_CLIENT_INSTANCE_ANY, NULL, NULL, os_params, QMI_TIMEOUT_MS,
+                         &client);
+    if (rc) {
+        fprintf(stderr, "qmi_client_init_instance(DMS): %d\n", rc);
+        return -1;
+    }
+    return 0;
+}
+
+/* Low power mode, the modem stores its settings when it goes to it */
+#define DMS_SET_OPERATING_MODE 0x002E
+#define TLV_OPERATING_MODE 0x01
+#define OPERATING_MODE_LOW_POWER 1
+
+static int radio_off(void) {
+    uint8_t req[8], resp[256];
+    uint8_t mode = OPERATING_MODE_LOW_POWER;
+    int len = sizeof(resp), rc;
+
+    if (connect_dms())
+        return 1;
+    rc = request(DMS_SET_OPERATING_MODE, req, put_tlv(req, 0, TLV_OPERATING_MODE, &mode, 1), resp,
+                 &len, 0);
+    q.release(client);
+    client = NULL;
+    return rc;
+}
+
 /*
  * voice-domain <pref>: voice domain preference the modem tells the network at
  * attach (0 CS only, 1 PS only, 2 CS preferred, 3 PS preferred). Only written when
@@ -511,11 +558,12 @@ static int cmd_nas_set(int tlv, uint32_t value, int permanent) {
  * network only learns it on the next attach.
  */
 #define NAS_GET_SSP 0x0034
+#define REATTACH_PROP "vendor.radio.ims_reattach"
 #define NAS_SET_SSP 0x0033
 #define TLV_SSP_VOICE_DOMAIN_GET 0x20
 #define TLV_SSP_VOICE_DOMAIN_SET 0x23
 
-static int cmd_voice_domain(uint32_t pref) {
+static int cmd_voice_domain(uint32_t pref, int reattach) {
     uint8_t req[16], resp[2048];
     const uint8_t *v;
     uint16_t tlen;
@@ -546,6 +594,18 @@ static int cmd_voice_domain(uint32_t pref) {
 out:
     q.release(client);
     client = NULL;
+    if (rc == 10 && reattach) {
+        /*
+         * The modem only stores it when it goes to low power mode, and the network
+         * only learns it on a new attach: turn the radio off, then have the system
+         * toggle the airplane mode (ims_reattach in system_ext), which turns it on
+         * again through telephony.
+         */
+        if (radio_off())
+            fprintf(stderr, "could not turn the radio off\n");
+        if (__system_property_set(REATTACH_PROP, "1"))
+            fprintf(stderr, "could not set %s\n", REATTACH_PROP);
+    }
     return rc;
 }
 
@@ -621,7 +681,7 @@ int main(int argc, char **argv) {
     int rc = 2;
 
     if (argc < 2) {
-        fprintf(stderr, "usage: %s list|get <index>|set-ims <index> <pco> [imcn]|setup <pco> <imcn> [pdp]|create-ims <pdp> <pco> <imcn>|delete <index>|runtime [port]|pcscf <port>|voice-domain <pref>|nas-ssp|nas-set <tlv> <u32> [perm]|cache\n",
+        fprintf(stderr, "usage: %s list|get <index>|set-ims <index> <pco> [imcn]|setup <pco> <imcn> [pdp]|create-ims <pdp> <pco> <imcn>|delete <index>|runtime [port]|pcscf <port>|voice-domain <pref> [reattach]|nas-ssp|nas-set <tlv> <u32> [perm]|cache\n",
                 argv[0]);
         return 2;
     }
@@ -636,7 +696,8 @@ int main(int argc, char **argv) {
     if (!strcmp(argv[1], "nas-ssp"))
         return cmd_nas_ssp();
     if (!strcmp(argv[1], "voice-domain") && argc > 2)
-        return cmd_voice_domain((uint32_t)strtoul(argv[2], NULL, 0));
+        return cmd_voice_domain((uint32_t)strtoul(argv[2], NULL, 0),
+                                argc > 3 && !strcmp(argv[3], "reattach"));
     if (!strcmp(argv[1], "nas-set") && argc > 3)
         return cmd_nas_set((int)strtol(argv[2], NULL, 0), (uint32_t)strtoul(argv[3], NULL, 0),
                            argc > 4 && !strcmp(argv[4], "perm"));

@@ -1,0 +1,16 @@
+# qmi_pcscf started by init to check the voice domain preference (SKT); rild also
+# runs it in its own domain for the IMS data calls
+type qmi_pcscf, domain;
+init_daemon_domain(qmi_pcscf)
+
+qmux_socket(qmi_pcscf)
+allow qmi_pcscf diag_device:chr_file rw_file_perms;
+
+get_prop(qmi_pcscf, default_prop)
+# vendor.radio.ims_reattach, for system_ext ims_reattach
+set_prop(qmi_pcscf, radio_prop)
+
+# QMI over the IPC router (DMS), like rild
+allow qmi_pcscf self:socket create_socket_perms;
+allowxperm qmi_pcscf self:socket ioctl msm_sock_ipc_ioctls;
+allow qmi_pcscf tee_device:chr_file getattr;

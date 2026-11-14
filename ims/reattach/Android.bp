@@ -1,0 +1,11 @@
+cc_binary {
+    name: "ims_reattach",
+    srcs: ["ims_reattach.cpp"],
+    shared_libs: [
+        "libbinder",
+        "liblog",
+        "libutils",
+    ],
+    init_rc: ["ims_reattach.rc"],
+    system_ext_specific: true,
+}

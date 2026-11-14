@@ -1,0 +1,12 @@
+# Toggles the airplane mode when qmi_pcscf changed the voice domain preference
+type ims_reattach, domain, coredomain;
+type ims_reattach_exec, system_file_type, exec_type, file_type;
+init_daemon_domain(ims_reattach)
+
+binder_use(ims_reattach)
+binder_call(ims_reattach, system_server)
+# result of the shell command
+binder_call(system_server, ims_reattach)
+allow system_server ims_reattach:fd use;
+
+allow ims_reattach connectivity_service:service_manager find;

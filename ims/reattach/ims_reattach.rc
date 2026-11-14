@@ -1,0 +1,11 @@
+# qmi_pcscf changed the voice domain preference of the modem (SKT), the network
+# only learns it on a new attach
+on property:vendor.radio.ims_reattach=1
+    setprop vendor.radio.ims_reattach 0
+    start ims_reattach
+
+service ims_reattach /system_ext/bin/ims_reattach
+    user root
+    group root
+    disabled
+    oneshot
