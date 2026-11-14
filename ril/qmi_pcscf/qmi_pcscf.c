@@ -21,8 +21,14 @@
  *   qmi_pcscf set-ims <index> <pco> [imcn]
  *                                     ask for the P-CSCF in the PCO and/or mark
  *                                     the PDN as IMS signalling (-1 keeps it)
- *   qmi_pcscf setup <pco> <imcn>      set them on the profiles of the ims APN,
- *                                     clear them on the other profiles
+ *   qmi_pcscf setup <pco> <imcn> [pdp]
+ *                                     set them on the profiles of the ims APN,
+ *                                     clear them on the other profiles; create
+ *                                     the ims profile with the PDP type when the
+ *                                     modem has none
+ *   qmi_pcscf create-ims <pdp> <pco> <imcn>
+ *                                     create a profile for the ims APN
+ *   qmi_pcscf delete <index>          delete a profile
  *   qmi_pcscf runtime [port]          settings of the call on a data port
  *   qmi_pcscf pcscf <port>            P-CSCF of the call on a data port
  *   qmi_pcscf voice-domain <pref>     voice domain preference of the modem, written
@@ -55,7 +61,9 @@ typedef void (*qmi_client_ind_cb)(qmi_client_type, unsigned int, void *, unsigne
 #define QMI_TIMEOUT_MS 5000
 
 /* WDS */
+#define WDS_CREATE_PROFILE 0x0027
 #define WDS_MODIFY_PROFILE_SETTINGS 0x0028
+#define WDS_DELETE_PROFILE 0x0029
 #define WDS_GET_PROFILE_LIST 0x002A
 #define WDS_GET_PROFILE_SETTINGS 0x002B
 #define WDS_GET_RUNTIME_SETTINGS 0x002D
@@ -69,7 +77,9 @@ typedef void (*qmi_client_ind_cb)(qmi_client_type, unsigned int, void *, unsigne
 #define TLV_PROFILE_TYPE 0x10
 #define PROFILE_TYPE_3GPP 0
 
-/* profile settings, the same in GET and MODIFY */
+/* profile settings, the same in CREATE, GET and MODIFY */
+#define TLV_PROFILE_NAME 0x10
+#define TLV_PDP_TYPE 0x11
 #define TLV_PCSCF_USING_PCO 0x1F
 #define TLV_IM_CN_FLAG 0x21
 #define TLV_APN_NAME 0x14
@@ -274,11 +284,51 @@ static int cmd_set_ims(int index, int pco, int imcn) {
     return 0;
 }
 
+/* create-ims <pdp> <pco> <imcn>: a profile of its own for the ims APN */
+static int cmd_create_ims(int pdp, int pco, int imcn) {
+    uint8_t req[64], resp[256];
+    uint8_t type = PROFILE_TYPE_3GPP, pdp_val = (uint8_t)pdp;
+    uint8_t pco_val = pco ? 1 : 0, imcn_val = imcn ? 1 : 0;
+    int len = sizeof(resp), off;
+    const uint8_t *id;
+    uint16_t tlen;
+
+    off = put_tlv(req, 0, TLV_PROFILE_ID, &type, 1);
+    off = put_tlv(req, off, TLV_PROFILE_NAME, "ims", 3);
+    off = put_tlv(req, off, TLV_PDP_TYPE, &pdp_val, 1);
+    off = put_tlv(req, off, TLV_APN_NAME, "ims", 3);
+    off = put_tlv(req, off, TLV_PCSCF_USING_PCO, &pco_val, 1);
+    off = put_tlv(req, off, TLV_IM_CN_FLAG, &imcn_val, 1);
+    if (request(WDS_CREATE_PROFILE, req, off, resp, &len, 0))
+        return 1;
+    id = find_tlv(resp, len, TLV_PROFILE_ID, &tlen);
+    printf("created profile %d for the ims APN: PDP type %d, P-CSCF in PCO %d, IM CN flag %d\n",
+           id && tlen == 2 ? id[1] : -1, pdp, pco, imcn);
+    return 0;
+}
+
+/* delete <index>: remove a profile, e.g. the ims one before going back to the stock firmware */
+static int cmd_delete(int index) {
+    uint8_t req[16], resp[256];
+    uint8_t id[2] = {PROFILE_TYPE_3GPP, (uint8_t)index};
+    int len = sizeof(resp);
+
+    if (request(WDS_DELETE_PROFILE, req, put_tlv(req, 0, TLV_PROFILE_ID, id, 2), resp, &len, 0))
+        return 1;
+    printf("deleted profile %d\n", index);
+    return 0;
+}
+
 /*
- * setup <pco> <imcn>: the profiles with the ims APN get the flags, the others get
+ * setup <pco> <imcn> [pdp]: the profiles with the ims APN get the flags, the others get
  * none of them. LG U+ modems crash when another profile keeps the IM CN flag.
+ *
+ * qcril reuses its own profiles (qdp_profile) for the calls of any APN and resets
+ * them, so the flags only stick on a profile of the modem: without one for the ims
+ * APN (new terminals, LG U+), create it with the PDP type of the call (0 IPv4,
+ * 2 IPv6, 3 IPv4v6).
  */
-static int cmd_setup(int pco, int imcn) {
+static int cmd_setup(int pco, int imcn, int pdp) {
     uint8_t req[16], resp[2048];
     uint8_t type = PROFILE_TYPE_3GPP;
     int len = sizeof(resp), n, i, off, rc = 0, found = 0;
@@ -295,10 +345,11 @@ static int cmd_setup(int pco, int imcn) {
     for (i = 0, off = 1; i < n && off + 3 <= tlen; i++) {
         uint8_t preq[16], presp[4096];
         uint8_t id[2] = {PROFILE_TYPE_3GPP, list[off + 1]};
-        int plen = sizeof(presp), ims;
+        int plen = sizeof(presp), ims, qdp;
         const uint8_t *apn;
         uint16_t alen;
 
+        qdp = list[off + 2] == 11 && !strncmp((const char *)list + off + 3, "qdp_profile", 11);
         off += 3 + list[off + 2];
         if (request(WDS_GET_PROFILE_SETTINGS, preq, put_tlv(preq, 0, TLV_PROFILE_ID, id, 2),
                     presp, &plen, 0)) {
@@ -307,12 +358,19 @@ static int cmd_setup(int pco, int imcn) {
         }
         apn = find_tlv(presp, plen, TLV_APN_NAME, &alen);
         ims = apn && alen == 3 && !strncasecmp((const char *)apn, "ims", 3);
-        found |= ims;
+        if (ims && !qdp)
+            found = 1;
         if (cmd_set_ims(id[1], ims ? pco : 0, ims ? imcn : 0))
             rc = 1;
     }
-    if (!found)
-        fprintf(stderr, "no profile with the ims APN\n");
+    if (!found) {
+        if (pdp < 0) {
+            fprintf(stderr, "no profile with the ims APN\n");
+            return rc;
+        }
+        if (cmd_create_ims(pdp, pco, imcn))
+            rc = 1;
+    }
     return rc;
 }
 
@@ -563,7 +621,7 @@ int main(int argc, char **argv) {
     int rc = 2;
 
     if (argc < 2) {
-        fprintf(stderr, "usage: %s list|get <index>|set-ims <index> <pco> [imcn]|setup <pco> <imcn>|runtime [port]|pcscf <port>|voice-domain <pref>|nas-ssp|nas-set <tlv> <u32> [perm]|cache\n",
+        fprintf(stderr, "usage: %s list|get <index>|set-ims <index> <pco> [imcn]|setup <pco> <imcn> [pdp]|create-ims <pdp> <pco> <imcn>|delete <index>|runtime [port]|pcscf <port>|voice-domain <pref>|nas-ssp|nas-set <tlv> <u32> [perm]|cache\n",
                 argv[0]);
         return 2;
     }
@@ -592,7 +650,11 @@ int main(int argc, char **argv) {
     else if (!strcmp(argv[1], "get") && argc > 2)
         rc = cmd_get(atoi(argv[2]));
     else if (!strcmp(argv[1], "setup") && argc > 3)
-        rc = cmd_setup(atoi(argv[2]), atoi(argv[3]));
+        rc = cmd_setup(atoi(argv[2]), atoi(argv[3]), argc > 4 ? atoi(argv[4]) : -1);
+    else if (!strcmp(argv[1], "delete") && argc > 2)
+        rc = cmd_delete(atoi(argv[2]));
+    else if (!strcmp(argv[1], "create-ims") && argc > 4)
+        rc = cmd_create_ims(atoi(argv[2]), atoi(argv[3]), atoi(argv[4]));
     else if (!strcmp(argv[1], "set-ims") && argc > 3)
         /* set-ims <index> <0|1> sets both, set-ims <index> <pco> <imcn> each (-1 keeps it) */
         rc = cmd_set_ims(atoi(argv[2]), atoi(argv[3]), argc > 4 ? atoi(argv[4]) : atoi(argv[3]));
