@@ -41,6 +41,8 @@ on init
 on fs
     mount_all /vendor/etc/fstab.qcom --early
     restorecon_recursive /persist
+    # restorecon_recursive skips it when the hash of /persist is up to date
+    restorecon /persist/.bt_nv.bin
 
     # GnssConfiguration doesn't actually look at gps.conf, just the debug file
     mount none /system/etc/gps.conf /system/etc/gps_debug.conf bind

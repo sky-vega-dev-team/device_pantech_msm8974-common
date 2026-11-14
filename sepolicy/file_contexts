@@ -30,3 +30,7 @@
 
 # IMS P-CSCF and profile helper, run by rild
 /(vendor|system/vendor)/bin/qmi_pcscf                    u:object_r:qmi_pcscf_exec:s0
+
+# Bluetooth NV of the WCNSS, read by btnvtool and hci_qcomm_init: give it the
+# same label on every terminal, older ones have it as persist_file
+/persist/\.bt_nv\.bin                                    u:object_r:persist_bluetooth_file:s0
