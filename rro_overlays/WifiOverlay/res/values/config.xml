@@ -25,6 +25,19 @@
          rmem_min,rmem_def,rmem_max,wmem_min,wmem_def,wmem_max -->
     <string name="config_wifi_tcp_buffers" translatable="false">524288,2097152,4194304,262144,524288,1048576</string>
 
+    <!-- Boolean indicating whether the wifi chipset has 5GHz band support -->
+    <bool translatable="false" name="config_wifi5ghzSupport">true</bool>
+
+    <!-- Indicates that 5GHz band is supported on this device for SoftAp -->
+    <bool translatable="false" name="config_wifiSoftap5ghzSupported">true</bool>
+
+    <!-- List of allowed channels in 5GHz band for softap: no DFS, and only the
+         primary channels of a HT40+ pair, the hostapd HAL always asks for HT40+ -->
+    <string translatable="false" name="config_wifiSoftap5gChannelList">36,44,149,157</string>
+
+    <!-- Wifi driver supports IEEE80211AC for softap -->
+    <bool translatable="false" name="config_wifi_softap_ieee80211ac_supported">true</bool>
+
     <!-- Enable WPA2 to WPA3 auto-upgrade -->
     <bool translatable="false" name="config_wifiSaeUpgradeEnabled">false</bool>
 
