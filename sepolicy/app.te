@@ -1,0 +1,3 @@
+# Apps probe the zygote socket options, nothing needs them
+dontaudit appdomain zygote:unix_stream_socket getopt;
+dontaudit untrusted_app vendor_default_prop:file { getattr open };

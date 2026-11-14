@@ -27,3 +27,6 @@
 
 # Fingerprint
 /dev/fpc1080        u:object_r:fpc1080_device:s0
+
+# IMS P-CSCF and profile helper, run by rild
+/(vendor|system/vendor)/bin/qmi_pcscf                    u:object_r:qmi_pcscf_exec:s0

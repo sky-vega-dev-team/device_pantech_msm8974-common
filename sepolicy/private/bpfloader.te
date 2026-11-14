@@ -1,0 +1,4 @@
+# The vendor netmgrd adds iptables rules: iptables replaces the whole table, and
+# the kernel checks again the xt_bpf matches of netd, which run the programs of
+# bpfloader. netmgrd is a vendor type, name the vendor domains.
+allow { domain -coredomain -appdomain } bpfloader:bpf prog_run;

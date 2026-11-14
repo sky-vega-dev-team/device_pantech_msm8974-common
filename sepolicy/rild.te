@@ -1,0 +1,11 @@
+# libril runs qmi_pcscf before the IMS data calls (profiles, P-CSCF, voice domain)
+allow rild qmi_pcscf_exec:file rx_file_perms;
+
+# The legacy qcril keeps its database in /data/misc/radio
+allow rild radio_core_data_file:dir create_dir_perms;
+allow rild radio_core_data_file:file create_file_perms;
+
+allow rild tee_device:chr_file getattr;
+
+get_prop(rild, default_prop)
+get_prop(rild, vendor_rild_libpath_prop)

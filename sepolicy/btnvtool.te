@@ -1,3 +1,4 @@
 init_daemon_domain(btnvtool)
 typeattribute btnvtool domain;
 allow btnvtool persist_file:dir search;
+allow btnvtool bluetooth_data_file:file getattr;

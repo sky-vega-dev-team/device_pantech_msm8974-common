@@ -1,0 +1,3 @@
+# Used by device/qcom/sepolicy-legacy, defined by the LineageOS-UL system policy.
+# Public so that the system_ext policy can let storaged read it.
+type sysfs_disk_stat, fs_type, sysfs_type;

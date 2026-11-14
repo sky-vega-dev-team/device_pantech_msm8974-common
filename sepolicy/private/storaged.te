@@ -1,0 +1,2 @@
+# Disk statistics of the eMMC (/sys/.../block/mmcblk0/stat)
+allow storaged sysfs_disk_stat:file r_file_perms;

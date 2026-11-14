@@ -8,3 +8,4 @@ allow cameraserver vendor_file:file execmod;
 
 get_prop(cameraserver, vendor_camera_sensor_prop)
 set_prop(cameraserver, vendor_camera_hal_prop)
+get_prop(cameraserver, vendor_default_prop)

@@ -1,0 +1,5 @@
+allow netmgrd fs_bpf:dir search;
+allow netmgrd fs_bpf:file read;
+
+get_prop(netmgrd, default_prop)
+get_prop(netmgrd, radio_prop)

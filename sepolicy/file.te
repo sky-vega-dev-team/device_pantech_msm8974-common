@@ -1,2 +1,2 @@
-# Used by device/qcom/sepolicy-legacy, defined by the LineageOS-UL system policy
-type sysfs_disk_stat, fs_type, sysfs_type;
+# IMS P-CSCF and profile helper, run by rild in its own domain
+type qmi_pcscf_exec, exec_type, vendor_file_type, file_type;
