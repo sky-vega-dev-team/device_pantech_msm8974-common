@@ -1,2 +1,6 @@
 allow vendor_init wifi_data_file:dir { search setattr getattr };
 allow vendor_init proc:file write;
+
+# vendor.rild.libpath and libargs from the vendor build.prop, which init only
+# loads when vendor_init may set them: without it rild never loads qcril
+set_prop(vendor_init, vendor_rild_libpath_prop)
