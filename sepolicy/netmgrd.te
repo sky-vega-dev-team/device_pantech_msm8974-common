@@ -3,3 +3,6 @@ allow netmgrd fs_bpf:file read;
 
 get_prop(netmgrd, default_prop)
 get_prop(netmgrd, radio_prop)
+
+# The shell of netmgrd reads ip, tc and iptables of the system it runs
+allow netmgrd system_file:file r_file_perms;

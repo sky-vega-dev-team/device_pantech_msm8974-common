@@ -1,3 +1,6 @@
 allow hal_gnss_default ssr_device:chr_file { read open };
 get_prop(hal_gnss_default, default_prop)
 get_prop(hal_gnss_default, system_prop)
+
+# gps.conf, izat.conf, sap.conf and flp.conf are in /system/etc here
+allow hal_gnss_default system_file:file r_file_perms;

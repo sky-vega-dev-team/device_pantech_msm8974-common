@@ -1,7 +1,13 @@
 # The camera HAL runs in cameraserver, through the passthrough provider
 unix_socket_send(cameraserver, camera, mm-qcamerad)
 allow cameraserver camera_device:chr_file rw_file_perms;
+# and opens the V4L2 nodes of msm_camera, /dev/video* here
+allow cameraserver video_device:chr_file rw_file_perms;
 allow cameraserver cameraserver:fd use;
+
+# The HAL loads the vendor camera libraries on demand, the JPEG encoder of
+# libqomx_core only on the first capture
+allow cameraserver vendor_file:file rx_file_perms;
 
 # libmmjpeg and libqomx_core still have text relocations
 allow cameraserver vendor_file:file execmod;

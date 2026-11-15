@@ -1,2 +1,5 @@
 allow sensors self:capability sys_nice;
 get_prop(sensors, default_prop)
+
+# sensor_def_qcomdev.conf is in /system/etc here
+allow sensors system_file:file r_file_perms;

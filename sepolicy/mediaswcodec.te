@@ -1,0 +1,2 @@
+# The passthrough allocator and mapper pull their vendor dependencies
+allow mediaswcodec vendor_file:file rx_file_perms;

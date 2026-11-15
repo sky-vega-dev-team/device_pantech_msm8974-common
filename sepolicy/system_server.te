@@ -2,3 +2,10 @@ allow system_server init:binder call;
 allow system_server userspace_reboot_exported_prop:file { read open getattr };
 allow system_server unlabeled:file unlink;
 get_prop(system_server, build_bootimage_prop)
+
+# The vibrator, sensors and memtrack HALs are passthrough here: system_server loads
+# their implementations and the legacy modules from the vendor libraries
+allow system_server vendor_file:file rx_file_perms;
+
+# vibrator.default drives /sys/class/timed_output/vibrator/enable
+allow system_server sysfs_vibrator:file rw_file_perms;

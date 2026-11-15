@@ -9,3 +9,9 @@ allow rild tee_device:chr_file getattr;
 
 get_prop(rild, default_prop)
 get_prop(rild, vendor_rild_libpath_prop)
+
+# qcrilmsgtunnel of the radio user talks to the OEM hook socket of qcril
+allow radio rild:unix_stream_socket connectto;
+allow radio qmuxd_socket:sock_file write;
+# The legacy qcril looks at /data/misc before its database
+allow rild system_data_file:dir getattr;

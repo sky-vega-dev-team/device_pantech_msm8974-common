@@ -1,2 +1,6 @@
 allow hal_power_default sysfs_mpdecision:dir search;
 allow hal_power_default sysfs_mpdecision:file rw_file_perms;
+
+# The launch boost of power-mode.cpp: hispeed and timer_rate of interactive,
+# and the boost of the governor
+allow hal_power_default sysfs_devices_system_cpu:file rw_file_perms;

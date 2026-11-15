@@ -1,1 +1,4 @@
 get_prop(location, default_prop)
+
+# gps.conf and izat.conf are in /system/etc here
+allow location system_file:file r_file_perms;

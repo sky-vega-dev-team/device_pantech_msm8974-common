@@ -35,3 +35,9 @@
 # Bluetooth NV of the WCNSS, read by btnvtool and hci_qcomm_init: give it the
 # same label on every terminal, older ones have it as persist_file
 /persist/\.bt_nv\.bin                                    u:object_r:persist_bluetooth_file:s0
+
+# Graphics: gralloc and what it pulls are loaded into the app processes by the
+# passthrough mapper of Android 14
+/(vendor|system/vendor)/lib/hw/gralloc\.msm8974\.so                u:object_r:same_process_hal_file:s0
+/(vendor|system/vendor)/lib/libmemalloc\.so                         u:object_r:same_process_hal_file:s0
+/(vendor|system/vendor)/lib/libsc-a3xx\.so                          u:object_r:same_process_hal_file:s0

@@ -2,3 +2,8 @@
 # the kernel checks again the xt_bpf matches of netd, which run the programs of
 # bpfloader. netmgrd is a vendor type, name the vendor domains.
 allow { domain -coredomain -appdomain } bpfloader:bpf prog_run;
+
+# With the per-file labels of bpffs, the xt_bpf matches iptables of netmgrd reads
+# again are pinned in netd_shared
+allow { domain -coredomain -appdomain } fs_bpf_netd_shared:dir search;
+allow { domain -coredomain -appdomain } fs_bpf_netd_shared:file read;

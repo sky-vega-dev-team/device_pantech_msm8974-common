@@ -1,3 +1,10 @@
 allow nfc device:chr_file { ioctl open read write };
 allow nfc firmware_file:file execute;
 allow nfc tee_device:chr_file getattr;
+
+# The NFC HAL is passthrough: the NFC service loads it and drives the PN547
+allow nfc vendor_file:file rx_file_perms;
+allow nfc nfc_device:chr_file rw_file_perms;
+# The firmware download of the PN547 looks up /vendor/firmware
+allow nfc firmware_file:dir search;
+allow nfc firmware_file:file r_file_perms;
