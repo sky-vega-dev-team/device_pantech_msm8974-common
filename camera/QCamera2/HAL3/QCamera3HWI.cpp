@@ -260,6 +260,7 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
       mHaveFrameDuration(false),
       mHaveSensitivity(false),
       mLastFlashMode(ANDROID_FLASH_MODE_OFF),
+      mPreviewSize(),
       mLastSettings(NULL),
       mParamHeap(NULL),
       mParameters(NULL),
@@ -821,6 +822,8 @@ int QCamera3HardwareInterface::configureStreams(
                     stream_config_info.type[i] = CAM_STREAM_TYPE_VIDEO;
                  } else {
                     stream_config_info.type[i] = CAM_STREAM_TYPE_PREVIEW;
+                    mPreviewSize.width = newStream->width;
+                    mPreviewSize.height = newStream->height;
                  }
               }
               break;
@@ -6253,7 +6256,36 @@ int QCamera3HardwareInterface::translateToHalMetadata
             reset = resetIfNeededROI(&roi, &scalerCropRegion);
         }
         if (reset) {
+            const cam_rect_t &active =
+                    gCamCapability[mCameraId]->active_array_size;
+            int32_t cx = 0, cy = 0;
+            bool touch = roi.rect.width > 0 && roi.rect.height > 0 &&
+                    mPreviewSize.width > 0 && mPreviewSize.height > 0 &&
+                    active.width > 0 && active.height > 0;
+            if (touch) {
+                cx = (int64_t)(roi.rect.left + roi.rect.width / 2 - active.left) *
+                        mPreviewSize.width / active.width;
+                cy = (int64_t)(roi.rect.top + roi.rect.height / 2 - active.top) *
+                        mPreviewSize.height / active.height;
+            }
             activeToSensorRect(&roi.rect);
+            /* The AEC of the backend turns the center of the region from
+             * CAMIF into preview coordinates, but that translation always
+             * gives 0 here, so the AEC metered the top left corner whatever
+             * was touched. The blob has that call patched out (see
+             * extract-files.sh); give the center in preview coordinates
+             * then, and keep the size in sensor units, which it still
+             * scales right. */
+            if (touch) {
+                if (roi.rect.width > 2 * cx)
+                    roi.rect.width = 2 * cx;
+                if (roi.rect.height > 2 * cy)
+                    roi.rect.height = 2 * cy;
+                roi.rect.width &= ~1;
+                roi.rect.height &= ~1;
+                roi.rect.left = cx - roi.rect.width / 2;
+                roi.rect.top = cy - roi.rect.height / 2;
+            }
             rc = AddSetMetaEntryToBatch(hal_metadata, CAM_INTF_META_AEC_ROI,
                     sizeof(roi), &roi);
         }

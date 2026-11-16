@@ -281,6 +281,8 @@ private:
     CameraMetadata mLastResult;
     /* Last partial (3A) result, for the same */
     CameraMetadata mLastUrgentResult;
+    /* Size of the preview stream, for the AEC touch region */
+    cam_dimension_t mPreviewSize;
     /* Settings of the last request that had any */
     camera_metadata_t *mLastSettings;
     QCamera3HeapMemory *mParamHeap;
