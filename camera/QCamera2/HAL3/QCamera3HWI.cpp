@@ -245,6 +245,7 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
       mFirstRequest(false),
       mRepeatingRequest(false),
       mCropRegionSet(false),
+      mLensShadingMapMode(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF),
       mLastSettings(NULL),
       mParamHeap(NULL),
       mParameters(NULL),
@@ -982,6 +983,7 @@ int QCamera3HardwareInterface::configureStreams(
 
     mFirstRequest = true;
     mCropRegionSet = false;
+    mLensShadingMapMode = ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF;
 
     //Get min frame duration for this streams configuration
     deriveMinFrameDuration();
@@ -1395,7 +1397,7 @@ void QCamera3HardwareInterface::handleMetadataWithLock(
             } else {
                 result.result = translateFromHalMetadata(metadata,
                         i->timestamp, i->request_id, i->jpegMetadata,
-                        i->pipeline_depth);
+                        i->pipeline_depth, i->lens_shading_map_mode);
             }
 
             if (i->blob_request) {
@@ -1871,6 +1873,7 @@ int QCamera3HardwareInterface::processCaptureRequest(
     pendingRequest.input_buffer_present = (request->input_buffer != NULL)? 1 : 0;
     pendingRequest.pipeline_depth = 0;
     pendingRequest.partial_result_cnt = 0;
+    pendingRequest.lens_shading_map_mode = mLensShadingMapMode;
     extractJpegMetadata(pendingRequest.jpegMetadata, request);
 
     for (size_t i = 0; i < request->num_output_buffers; i++) {
@@ -2297,7 +2300,8 @@ QCamera3HardwareInterface::translateFromHalMetadata(
                                  nsecs_t timestamp,
                                  int32_t request_id,
                                  const CameraMetadata& jpegMetadata,
-                                 uint8_t pipeline_depth)
+                                 uint8_t pipeline_depth,
+                                 uint8_t lens_shading_map_mode)
 {
     CameraMetadata camMetadata;
     camera_metadata_t* resultMetadata;
@@ -2880,13 +2884,15 @@ QCamera3HardwareInterface::translateFromHalMetadata(
     /* The backend doesn't send CAM_INTF_META_LENS_SHADING_MAP either, but
      * RAW based HDR+ needs a map in every frame. Report a flat map (no
      * shading correction) of ANDROID_LENS_INFO_SHADING_MAP_SIZE unless the
-     * client turned the map off. */
+     * client turned the map off, as this request asked for it: results
+     * come frames after newer requests changed the mode. Report that mode
+     * too, not the one the backend runs with (always off, see
+     * translateToHalMetadata()). */
+    camMetadata.update(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE,
+            &lens_shading_map_mode, 1);
     if (!camMetadata.exists(ANDROID_STATISTICS_LENS_SHADING_MAP)) {
-        bool wantMap = true;
-        if (camMetadata.exists(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE)) {
-            wantMap = camMetadata.find(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE).data.u8[0] ==
-                    ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_ON;
-        }
+        bool wantMap = lens_shading_map_mode ==
+                ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_ON;
         int map_width = gCamCapability[mCameraId]->lens_shading_map_size.width;
         int map_height = gCamCapability[mCameraId]->lens_shading_map_size.height;
         if (wantMap && map_width > 0 && map_height > 0 &&
@@ -6008,8 +6014,13 @@ int QCamera3HardwareInterface::translateToHalMetadata
     }
 
     if (frame_settings.exists(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE)) {
-        uint8_t lensShadingMapMode =
+        /* Keep the backend's shading map statistics off: with them on, the
+         * ISP fails to stream on full size YUV + RAW (ISP_CFG_STREAM error).
+         * The map reported to the client is synthesized in
+         * translateFromHalMetadata() from the mode asked for here. */
+        mLensShadingMapMode =
             frame_settings.find(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE).data.u8[0];
+        uint8_t lensShadingMapMode = ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF;
         rc = AddSetMetaEntryToBatch(hal_metadata, CAM_INTF_META_LENS_SHADING_MAP_MODE,
                 sizeof(lensShadingMapMode), &lensShadingMapMode);
     }

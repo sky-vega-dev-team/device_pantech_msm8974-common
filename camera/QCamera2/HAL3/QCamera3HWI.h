@@ -158,7 +158,8 @@ public:
 
     camera_metadata_t* translateFromHalMetadata(metadata_buffer_t *metadata,
                             nsecs_t timestamp, int32_t request_id,
-                            const CameraMetadata& jpegMetadata, uint8_t pipeline_depth);
+                            const CameraMetadata& jpegMetadata, uint8_t pipeline_depth,
+                            uint8_t lens_shading_map_mode);
     int getJpegSettings(const camera_metadata_t *settings);
     int initParameters();
     void deinitParameters();
@@ -241,6 +242,11 @@ private:
     /* Last ANDROID_SCALER_CROP_REGION asked for, reported back in results */
     cam_crop_region_t mCropRegion;
     bool mCropRegionSet;
+    /* Lens shading map mode of the latest request with settings; requests
+     * without settings repeat it. It is not forwarded to the backend, which
+     * breaks ISP stream on with it enabled. Each pending request keeps its
+     * own copy, as results arrive frames after newer requests changed it. */
+    uint8_t mLensShadingMapMode;
     /* Settings of the last request that had any */
     camera_metadata_t *mLastSettings;
     QCamera3HeapMemory *mParamHeap;
@@ -265,6 +271,8 @@ private:
         CameraMetadata jpegMetadata;
         uint8_t pipeline_depth;
         uint32_t partial_result_cnt;
+        /* ANDROID_STATISTICS_LENS_SHADING_MAP_MODE in effect for this request */
+        uint8_t lens_shading_map_mode;
     } PendingRequestInfo;
     typedef struct {
         uint32_t frame_number;
