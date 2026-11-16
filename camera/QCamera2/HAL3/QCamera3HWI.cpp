@@ -2864,6 +2864,46 @@ QCamera3HardwareInterface::translateFromHalMetadata(
         camMetadata.update(ANDROID_SCALER_CROP_REGION, scalerCropRegion, 4);
     }
 
+    /* Neither does it report CAM_INTF_META_COLOR_CORRECT_TRANSFORM. Derive a
+     * camera (white balanced) RGB -> linear sRGB matrix from the static
+     * forward matrix 1 (camera RGB -> XYZ D50): CCM = XYZ(D50)->sRGB * FM1.
+     * Fall back to identity if the forward matrix is unusable. */
+    if (!camMetadata.exists(ANDROID_COLOR_CORRECTION_TRANSFORM)) {
+        static const float kXyzD50ToSrgb[3][3] = {
+            { 3.1338561f, -1.6168667f, -0.4906146f},
+            {-0.9787684f,  1.9161415f,  0.0334540f},
+            { 0.0719453f, -0.2289914f,  1.4052427f}};
+        const int32_t denom = 1 << 10;
+        camera_metadata_rational_t ccm[9];
+        bool valid = true;
+        float fm[3][3];
+        for (int i = 0; i < 3 && valid; i++) {
+            for (int j = 0; j < 3; j++) {
+                cam_rational_type_t v =
+                        gCamCapability[mCameraId]->forward_matrix1[i][j];
+                if (v.denominator == 0) {
+                    valid = false;
+                    break;
+                }
+                fm[i][j] = (float)v.numerator / v.denominator;
+            }
+        }
+        for (int i = 0; i < 3; i++) {
+            for (int j = 0; j < 3; j++) {
+                float c = (i == j) ? 1.0f : 0.0f;
+                if (valid) {
+                    c = 0.0f;
+                    for (int k = 0; k < 3; k++)
+                        c += kXyzD50ToSrgb[i][k] * fm[k][j];
+                }
+                ccm[i * 3 + j].numerator =
+                        (int32_t)(c * denom + (c >= 0.0f ? 0.5f : -0.5f));
+                ccm[i * 3 + j].denominator = denom;
+            }
+        }
+        camMetadata.update(ANDROID_COLOR_CORRECTION_TRANSFORM, ccm, 9);
+    }
+
     /* The backend never reports CAM_INTF_META_NEUTRAL_COL_POINT, but the key
      * is listed in the available result keys (RAW capability) and clients
      * such as HDR+ / DNG writers expect it. Derive it from the AWB gains:
