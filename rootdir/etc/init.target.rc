@@ -239,6 +239,11 @@ service qcamerasvr /vendor/bin/mm-qcamera-daemon
 on property:init.svc.media=restarting
     restart qcamerasvr
 
+# The camera HAL runs inside cameraserver: when it dies the daemon keeps the
+# old session state and the camera stays unusable until reboot, so reset it.
+on property:init.svc.cameraserver=restarting
+    restart qcamerasvr
+
 on property:init.svc.servicemanager=restarting
     restart qcamerasvr
 
