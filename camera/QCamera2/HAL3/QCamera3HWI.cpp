@@ -248,6 +248,10 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
       mCropRegionSet(false),
       mLensShadingMapMode(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF),
       mHaveTonemap(false),
+      mHaveCcGains(false),
+      mHaveCcTransform(false),
+      mHaveCcMode(false),
+      mHaveControlMode(false),
       mLastSettings(NULL),
       mParamHeap(NULL),
       mParameters(NULL),
@@ -460,6 +464,7 @@ int QCamera3HardwareInterface::closeCamera()
     mCameraHandle = NULL;
     mCameraOpened = false;
     mHaveTonemap = false;
+    mHaveCcGains = mHaveCcTransform = mHaveCcMode = mHaveControlMode = false;
     clearSessionProps();
 
 #ifdef HAS_MULTIMEDIA_HINTS
@@ -988,6 +993,7 @@ int QCamera3HardwareInterface::configureStreams(
     mCropRegionSet = false;
     mLensShadingMapMode = ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF;
     mHaveTonemap = false;
+    mHaveCcGains = mHaveCcTransform = mHaveCcMode = mHaveControlMode = false;
 
     //Get min frame duration for this streams configuration
     deriveMinFrameDuration();
@@ -2945,6 +2951,41 @@ QCamera3HardwareInterface::translateFromHalMetadata(
             camMetadata.update(ANDROID_STATISTICS_LENS_SHADING_MAP, flatMap,
                     4 * map_width * map_height);
         }
+    }
+
+    /* The backend also leaves the white balance gains, the color correction
+     * transform and the modes out of some results. Clients such as HDR+
+     * take those for a white balance change within a burst and process the
+     * frame as not white balanced at all (neutral point 1, 1, 1): the merged
+     * picture comes out magenta. Repeat the last ones the backend reported. */
+    if (camMetadata.exists(ANDROID_COLOR_CORRECTION_GAINS) &&
+            camMetadata.find(ANDROID_COLOR_CORRECTION_GAINS).count == 4) {
+        memcpy(mLastCcGains, camMetadata.find(ANDROID_COLOR_CORRECTION_GAINS).data.f,
+                sizeof(mLastCcGains));
+        mHaveCcGains = true;
+    } else if (mHaveCcGains) {
+        camMetadata.update(ANDROID_COLOR_CORRECTION_GAINS, mLastCcGains, 4);
+    }
+    if (camMetadata.exists(ANDROID_COLOR_CORRECTION_TRANSFORM) &&
+            camMetadata.find(ANDROID_COLOR_CORRECTION_TRANSFORM).count == 9) {
+        memcpy(mLastCcTransform,
+                camMetadata.find(ANDROID_COLOR_CORRECTION_TRANSFORM).data.r,
+                sizeof(mLastCcTransform));
+        mHaveCcTransform = true;
+    } else if (mHaveCcTransform) {
+        camMetadata.update(ANDROID_COLOR_CORRECTION_TRANSFORM, mLastCcTransform, 9);
+    }
+    if (camMetadata.exists(ANDROID_COLOR_CORRECTION_MODE)) {
+        mLastCcMode = camMetadata.find(ANDROID_COLOR_CORRECTION_MODE).data.u8[0];
+        mHaveCcMode = true;
+    } else if (mHaveCcMode) {
+        camMetadata.update(ANDROID_COLOR_CORRECTION_MODE, &mLastCcMode, 1);
+    }
+    if (camMetadata.exists(ANDROID_CONTROL_MODE)) {
+        mLastControlMode = camMetadata.find(ANDROID_CONTROL_MODE).data.u8[0];
+        mHaveControlMode = true;
+    } else if (mHaveControlMode) {
+        camMetadata.update(ANDROID_CONTROL_MODE, &mLastControlMode, 1);
     }
 
     /* Neither does it report CAM_INTF_META_COLOR_CORRECT_TRANSFORM. Derive a

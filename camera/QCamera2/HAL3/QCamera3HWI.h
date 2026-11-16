@@ -251,6 +251,16 @@ private:
      * frames, and HDR+ rejects bursts whose curves come and go. */
     cam_rgb_tonemap_curves mLastTonemap;
     bool mHaveTonemap;
+    /* Last white balance and color correction the backend reported; it
+     * leaves them out of some results, see translateFromHalMetadata() */
+    float mLastCcGains[4];
+    camera_metadata_rational_t mLastCcTransform[9];
+    uint8_t mLastCcMode;
+    uint8_t mLastControlMode;
+    bool mHaveCcGains;
+    bool mHaveCcTransform;
+    bool mHaveCcMode;
+    bool mHaveControlMode;
     /* Settings of the last request that had any */
     camera_metadata_t *mLastSettings;
     QCamera3HeapMemory *mParamHeap;
