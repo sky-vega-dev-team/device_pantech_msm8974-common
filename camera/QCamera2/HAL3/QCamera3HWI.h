@@ -247,6 +247,10 @@ private:
      * breaks ISP stream on with it enabled. Each pending request keeps its
      * own copy, as results arrive frames after newer requests changed it. */
     uint8_t mLensShadingMapMode;
+    /* Last tonemap curves the backend reported; it skips them on some
+     * frames, and HDR+ rejects bursts whose curves come and go. */
+    cam_rgb_tonemap_curves mLastTonemap;
+    bool mHaveTonemap;
     /* Settings of the last request that had any */
     camera_metadata_t *mLastSettings;
     QCamera3HeapMemory *mParamHeap;

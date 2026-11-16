@@ -35,6 +35,7 @@
 #include <hardware/camera3.h>
 #include <camera/CameraMetadata.h>
 #include <stdlib.h>
+#include <math.h>
 #include <fcntl.h>
 #include <stdint.h>
 #include <log/log.h>
@@ -246,6 +247,7 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
       mRepeatingRequest(false),
       mCropRegionSet(false),
       mLensShadingMapMode(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF),
+      mHaveTonemap(false),
       mLastSettings(NULL),
       mParamHeap(NULL),
       mParameters(NULL),
@@ -457,6 +459,7 @@ int QCamera3HardwareInterface::closeCamera()
     rc = mCameraHandle->ops->close_camera(mCameraHandle->camera_handle);
     mCameraHandle = NULL;
     mCameraOpened = false;
+    mHaveTonemap = false;
     clearSessionProps();
 
 #ifdef HAS_MULTIMEDIA_HINTS
@@ -984,6 +987,7 @@ int QCamera3HardwareInterface::configureStreams(
     mFirstRequest = true;
     mCropRegionSet = false;
     mLensShadingMapMode = ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF;
+    mHaveTonemap = false;
 
     //Get min frame duration for this streams configuration
     deriveMinFrameDuration();
@@ -2642,6 +2646,11 @@ QCamera3HardwareInterface::translateFromHalMetadata(
              /* ch0 = G, ch 1 = B, ch 2 = R*/
              cam_rgb_tonemap_curves *tonemap = (cam_rgb_tonemap_curves *)
              POINTER_OF(CAM_INTF_META_TONEMAP_CURVES, metadata);
+             if (tonemap->tonemap_points_cnt > 0 &&
+                     tonemap->tonemap_points_cnt <= CAM_MAX_TONEMAP_CURVE_SIZE) {
+                 mLastTonemap = *tonemap;
+                 mHaveTonemap = true;
+             }
              camMetadata.update(ANDROID_TONEMAP_CURVE_GREEN,
                                 (float*)tonemap->curves[0].tonemap_points,
                                 tonemap->tonemap_points_cnt * 2);
@@ -2879,6 +2888,38 @@ QCamera3HardwareInterface::translateFromHalMetadata(
                     active.width, active.height};
             camMetadata.update(ANDROID_SCALER_CROP_REGION, fullCrop, 4);
         }
+    }
+
+    /* The backend leaves the tonemap curves out of some results. Repeat the
+     * last ones (or an sRGB gamma curve before any arrived) so every result
+     * of a burst carries the same curves. Channels are G, B, R. */
+    if (!camMetadata.exists(ANDROID_TONEMAP_CURVE_GREEN) ||
+            !camMetadata.exists(ANDROID_TONEMAP_CURVE_BLUE) ||
+            !camMetadata.exists(ANDROID_TONEMAP_CURVE_RED)) {
+        if (!mHaveTonemap) {
+            const int points = 64;
+            memset(&mLastTonemap, 0, sizeof(mLastTonemap));
+            mLastTonemap.tonemap_points_cnt = points;
+            for (int i = 0; i < points; i++) {
+                float in = (float)i / (points - 1);
+                float out = in <= 0.0031308f ? in * 12.92f :
+                        1.055f * powf(in, 1.0f / 2.4f) - 0.055f;
+                for (int ch = 0; ch < 3; ch++) {
+                    mLastTonemap.curves[ch].tonemap_points[i][0] = in;
+                    mLastTonemap.curves[ch].tonemap_points[i][1] = out;
+                }
+            }
+            mHaveTonemap = true;
+        }
+        camMetadata.update(ANDROID_TONEMAP_CURVE_GREEN,
+                (float *)mLastTonemap.curves[0].tonemap_points,
+                mLastTonemap.tonemap_points_cnt * 2);
+        camMetadata.update(ANDROID_TONEMAP_CURVE_BLUE,
+                (float *)mLastTonemap.curves[1].tonemap_points,
+                mLastTonemap.tonemap_points_cnt * 2);
+        camMetadata.update(ANDROID_TONEMAP_CURVE_RED,
+                (float *)mLastTonemap.curves[2].tonemap_points,
+                mLastTonemap.tonemap_points_cnt * 2);
     }
 
     /* The backend doesn't send CAM_INTF_META_LENS_SHADING_MAP either, but
