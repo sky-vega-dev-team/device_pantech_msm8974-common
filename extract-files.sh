@@ -45,6 +45,18 @@ SRC="${1:-adb}"
 SRC_QC="${2:-$CM_ROOT/vendor/lge/hammerhead/proprietary}"
 
 # Initialize the helper for common device
+function blob_fixup() {
+    case "${1}" in
+        vendor/lib/libmmcamera2_stats_algorithm.so)
+            # aec_set_roi: drop the CAMIF to preview translation of the
+            # touch point (blx at 0xaa3e), which gives 0 on these devices;
+            # the HAL passes the point in preview coordinates instead.
+            printf '\x00\xbf\x00\xbf' | dd of="${2}" bs=1 seek=$((0xaa3e)) \
+                count=4 conv=notrunc 2>/dev/null
+            ;;
+    esac
+}
+
 setup_vendor "$DEVICE_COMMON" "$VENDOR" "$CM_ROOT" true
 
 extract "$MY_DIR"/proprietary-files.txt "$SRC"
