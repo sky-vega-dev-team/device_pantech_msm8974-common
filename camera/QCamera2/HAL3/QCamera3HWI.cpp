@@ -558,16 +558,12 @@ int QCamera3HardwareInterface::validateStreamDimensions(
             case ANDROID_SCALER_AVAILABLE_FORMATS_RAW16:
             case ANDROID_SCALER_AVAILABLE_FORMATS_RAW_OPAQUE:
             case HAL_PIXEL_FORMAT_RAW10:
-                for (int i = 0;
-                      i < gCamCapability[mCameraId]->supported_raw_dim_cnt; i++){
-                    if (gCamCapability[mCameraId]->raw_dim[i].width
-                            == (int32_t) newStream->width
-                        && gCamCapability[mCameraId]->raw_dim[i].height
-                            == (int32_t) newStream->height) {
-                        sizeFound = true;
-                    }
-                }
-                break;
+                /* RAW is not advertised: with a full size frame split over
+                 * both VFEs, the backend never sets up the buffer queue of a
+                 * CAMIF RAW stream, its write masters fault the IOMMU and the
+                 * device hangs closing the camera. Refuse it outright. */
+                ALOGE("%s: RAW streams are not supported", __func__);
+                return -EINVAL;
             case HAL_PIXEL_FORMAT_BLOB:
                 for (int i = 0;
                   i < gCamCapability[mCameraId]->picture_sizes_tbl_cnt;i++){
@@ -2987,7 +2983,6 @@ QCamera3HardwareInterface::translateFromHalMetadata(
     } else if (mHaveControlMode) {
         camMetadata.update(ANDROID_CONTROL_MODE, &mLastControlMode, 1);
     }
-
     /* Neither does it report CAM_INTF_META_COLOR_CORRECT_TRANSFORM. Derive a
      * camera (white balanced) RGB -> linear sRGB matrix from the static
      * forward matrix 1 (camera RGB -> XYZ D50): CCM = XYZ(D50)->sRGB * FM1.
@@ -4059,6 +4054,10 @@ int QCamera3HardwareInterface::initStaticMetadata(int cameraId)
     staticInfo.update(ANDROID_STATISTICS_INFO_MAX_SHARPNESS_MAP_VALUE,
             &gCamCapability[cameraId]->max_sharpness_map_value, 1);
 
+    /* RAW streams are refused (see validateStreamDimensions()), but the RAW
+     * formats and sizes stay listed: GCam looks up a RAW format to set up
+     * HDR+ even for its YUV configuration, and fails to open the camera
+     * without one ("No HDR+ compatible raw format supported"). */
     int32_t scalar_formats[] = {
             ANDROID_SCALER_AVAILABLE_FORMATS_RAW_OPAQUE,
             ANDROID_SCALER_AVAILABLE_FORMATS_RAW16,
@@ -4446,9 +4445,8 @@ int QCamera3HardwareInterface::initStaticMetadata(int cameraId)
     available_capabilities[available_capabilities_count++] = ANDROID_REQUEST_AVAILABLE_CAPABILITIES_MANUAL_POST_PROCESSING;
     available_capabilities[available_capabilities_count++] = ANDROID_REQUEST_AVAILABLE_CAPABILITIES_READ_SENSOR_SETTINGS;
     available_capabilities[available_capabilities_count++] = ANDROID_REQUEST_AVAILABLE_CAPABILITIES_BURST_CAPTURE;
-    if (facingBack) {
-        available_capabilities[available_capabilities_count++] = ANDROID_REQUEST_AVAILABLE_CAPABILITIES_RAW;
-    }
+    /* No RAW capability: RAW streams are refused, see
+     * validateStreamDimensions() */
     staticInfo.update(ANDROID_REQUEST_AVAILABLE_CAPABILITIES,
                       available_capabilities,
                       available_capabilities_count);
@@ -4702,7 +4700,9 @@ int QCamera3HardwareInterface::initStaticMetadata(int cameraId)
     int32_t stall_formats[] = {HAL_PIXEL_FORMAT_BLOB, ANDROID_SCALER_AVAILABLE_FORMATS_RAW16};
     size_t stall_formats_count = sizeof(stall_formats)/sizeof(int32_t);
 
-    size_t available_stall_size = gCamCapability[cameraId]->picture_sizes_tbl_cnt * 4;
+    /* Room for the RAW sizes too */
+    size_t available_stall_size = (gCamCapability[cameraId]->picture_sizes_tbl_cnt +
+            gCamCapability[cameraId]->supported_raw_dim_cnt) * 4;
     int64_t available_stall_durations[available_stall_size];
     idx = 0;
     for (uint32_t j = 0; j < stall_formats_count; j++) {
