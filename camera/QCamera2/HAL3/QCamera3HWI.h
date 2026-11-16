@@ -159,7 +159,7 @@ public:
     camera_metadata_t* translateFromHalMetadata(metadata_buffer_t *metadata,
                             nsecs_t timestamp, int32_t request_id,
                             const CameraMetadata& jpegMetadata, uint8_t pipeline_depth,
-                            uint8_t lens_shading_map_mode);
+                            uint8_t lens_shading_map_mode, bool manual_exposure);
     int getJpegSettings(const camera_metadata_t *settings);
     int initParameters();
     void deinitParameters();
@@ -251,6 +251,13 @@ private:
      * frames, and HDR+ rejects bursts whose curves come and go. */
     cam_rgb_tonemap_curves mLastTonemap;
     bool mHaveTonemap;
+    /* Exposure of the latest request with settings is manual (AE or all of
+     * 3A off), as in HDR+ bursts; the backend's adaptive tonemap curves then
+     * change from frame to frame, see translateFromHalMetadata() */
+    bool mAeModeOff;
+    bool mControlModeOff;
+    bool mTonemapLocked;
+    int mTonemapAutoResults;
     /* Last white balance and color correction the backend reported; it
      * leaves them out of some results, see translateFromHalMetadata() */
     float mLastCcGains[4];
@@ -287,6 +294,8 @@ private:
         uint32_t partial_result_cnt;
         /* ANDROID_STATISTICS_LENS_SHADING_MAP_MODE in effect for this request */
         uint8_t lens_shading_map_mode;
+        /* Exposure set manually for this request */
+        bool manual_exposure;
     } PendingRequestInfo;
     typedef struct {
         uint32_t frame_number;

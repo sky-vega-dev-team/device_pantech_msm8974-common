@@ -248,6 +248,10 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
       mCropRegionSet(false),
       mLensShadingMapMode(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF),
       mHaveTonemap(false),
+      mAeModeOff(false),
+      mControlModeOff(false),
+      mTonemapLocked(false),
+      mTonemapAutoResults(0),
       mHaveCcGains(false),
       mHaveCcTransform(false),
       mHaveCcMode(false),
@@ -464,6 +468,8 @@ int QCamera3HardwareInterface::closeCamera()
     mCameraHandle = NULL;
     mCameraOpened = false;
     mHaveTonemap = false;
+    mTonemapLocked = false;
+    mTonemapAutoResults = 0;
     mHaveCcGains = mHaveCcTransform = mHaveCcMode = mHaveControlMode = false;
     clearSessionProps();
 
@@ -989,6 +995,9 @@ int QCamera3HardwareInterface::configureStreams(
     mCropRegionSet = false;
     mLensShadingMapMode = ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_OFF;
     mHaveTonemap = false;
+    mAeModeOff = mControlModeOff = false;
+    mTonemapLocked = false;
+    mTonemapAutoResults = 0;
     mHaveCcGains = mHaveCcTransform = mHaveCcMode = mHaveControlMode = false;
 
     //Get min frame duration for this streams configuration
@@ -1403,7 +1412,8 @@ void QCamera3HardwareInterface::handleMetadataWithLock(
             } else {
                 result.result = translateFromHalMetadata(metadata,
                         i->timestamp, i->request_id, i->jpegMetadata,
-                        i->pipeline_depth, i->lens_shading_map_mode);
+                        i->pipeline_depth, i->lens_shading_map_mode,
+                        i->manual_exposure);
             }
 
             if (i->blob_request) {
@@ -1880,6 +1890,7 @@ int QCamera3HardwareInterface::processCaptureRequest(
     pendingRequest.pipeline_depth = 0;
     pendingRequest.partial_result_cnt = 0;
     pendingRequest.lens_shading_map_mode = mLensShadingMapMode;
+    pendingRequest.manual_exposure = mAeModeOff || mControlModeOff;
     extractJpegMetadata(pendingRequest.jpegMetadata, request);
 
     for (size_t i = 0; i < request->num_output_buffers; i++) {
@@ -2307,7 +2318,8 @@ QCamera3HardwareInterface::translateFromHalMetadata(
                                  int32_t request_id,
                                  const CameraMetadata& jpegMetadata,
                                  uint8_t pipeline_depth,
-                                 uint8_t lens_shading_map_mode)
+                                 uint8_t lens_shading_map_mode,
+                                 bool manual_exposure)
 {
     CameraMetadata camMetadata;
     camera_metadata_t* resultMetadata;
@@ -2648,7 +2660,7 @@ QCamera3HardwareInterface::translateFromHalMetadata(
              /* ch0 = G, ch 1 = B, ch 2 = R*/
              cam_rgb_tonemap_curves *tonemap = (cam_rgb_tonemap_curves *)
              POINTER_OF(CAM_INTF_META_TONEMAP_CURVES, metadata);
-             if (tonemap->tonemap_points_cnt > 0 &&
+             if (!mTonemapLocked && tonemap->tonemap_points_cnt > 0 &&
                      tonemap->tonemap_points_cnt <= CAM_MAX_TONEMAP_CURVE_SIZE) {
                  mLastTonemap = *tonemap;
                  mHaveTonemap = true;
@@ -2895,7 +2907,21 @@ QCamera3HardwareInterface::translateFromHalMetadata(
     /* The backend leaves the tonemap curves out of some results. Repeat the
      * last ones (or an sRGB gamma curve before any arrived) so every result
      * of a burst carries the same curves. Channels are G, B, R. */
-    if (!camMetadata.exists(ANDROID_TONEMAP_CURVE_GREEN) ||
+    /* Its adaptive curves also change from frame to frame, while HDR+ needs
+     * the same curves in every frame of a burst ("Payloads with varying
+     * tonemapping curves not allowed"). Its bursts set the exposure manually:
+     * keep reporting the curves of the first frame with manual exposure until
+     * a few frames with auto exposure in a row (previews in between) ended
+     * the burst. */
+    if (manual_exposure) {
+        mTonemapAutoResults = 0;
+        if (!mTonemapLocked && mHaveTonemap)
+            mTonemapLocked = true;
+    } else if (mTonemapLocked && ++mTonemapAutoResults >= 8) {
+        mTonemapLocked = false;
+    }
+    if (mTonemapLocked ||
+            !camMetadata.exists(ANDROID_TONEMAP_CURVE_GREEN) ||
             !camMetadata.exists(ANDROID_TONEMAP_CURVE_BLUE) ||
             !camMetadata.exists(ANDROID_TONEMAP_CURVE_RED)) {
         if (!mHaveTonemap) {
@@ -5606,6 +5632,7 @@ int QCamera3HardwareInterface::translateToHalMetadata
      */
     if (frame_settings.exists(ANDROID_CONTROL_MODE)) {
         uint8_t metaMode = frame_settings.find(ANDROID_CONTROL_MODE).data.u8[0];
+        mControlModeOff = metaMode == ANDROID_CONTROL_MODE_OFF;
         rc = AddSetMetaEntryToBatch(mParameters, CAM_INTF_META_MODE,
                 sizeof(metaMode), &metaMode);
         if (metaMode == ANDROID_CONTROL_MODE_USE_SCENE_MODE) {
@@ -5632,6 +5659,7 @@ int QCamera3HardwareInterface::translateToHalMetadata
         uint8_t aeMode;
         int32_t redeye;
 
+        mAeModeOff = fwk_aeMode == ANDROID_CONTROL_AE_MODE_OFF;
         if (fwk_aeMode == ANDROID_CONTROL_AE_MODE_OFF ) {
             aeMode = CAM_AE_MODE_OFF;
         } else {
