@@ -2864,6 +2864,42 @@ QCamera3HardwareInterface::translateFromHalMetadata(
         camMetadata.update(ANDROID_SCALER_CROP_REGION, scalerCropRegion, 4);
     }
 
+    /* Some results carry a zero crop region, which HDR+ rejects as invalid.
+     * Report the full active array instead (no digital zoom). */
+    if (camMetadata.exists(ANDROID_SCALER_CROP_REGION)) {
+        camera_metadata_entry_t crop =
+                camMetadata.find(ANDROID_SCALER_CROP_REGION);
+        if (crop.count == 4 && (crop.data.i32[2] <= 0 || crop.data.i32[3] <= 0)) {
+            cam_rect_t active = gCamCapability[mCameraId]->active_array_size;
+            int32_t fullCrop[4] = {active.left, active.top,
+                    active.width, active.height};
+            camMetadata.update(ANDROID_SCALER_CROP_REGION, fullCrop, 4);
+        }
+    }
+
+    /* The backend doesn't send CAM_INTF_META_LENS_SHADING_MAP either, but
+     * RAW based HDR+ needs a map in every frame. Report a flat map (no
+     * shading correction) of ANDROID_LENS_INFO_SHADING_MAP_SIZE unless the
+     * client turned the map off. */
+    if (!camMetadata.exists(ANDROID_STATISTICS_LENS_SHADING_MAP)) {
+        bool wantMap = true;
+        if (camMetadata.exists(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE)) {
+            wantMap = camMetadata.find(ANDROID_STATISTICS_LENS_SHADING_MAP_MODE).data.u8[0] ==
+                    ANDROID_STATISTICS_LENS_SHADING_MAP_MODE_ON;
+        }
+        int map_width = gCamCapability[mCameraId]->lens_shading_map_size.width;
+        int map_height = gCamCapability[mCameraId]->lens_shading_map_size.height;
+        if (wantMap && map_width > 0 && map_height > 0 &&
+                map_width <= CAM_MAX_SHADING_MAP_WIDTH &&
+                map_height <= CAM_MAX_SHADING_MAP_HEIGHT) {
+            float flatMap[4 * CAM_MAX_SHADING_MAP_WIDTH * CAM_MAX_SHADING_MAP_HEIGHT];
+            for (int i = 0; i < 4 * map_width * map_height; i++)
+                flatMap[i] = 1.0f;
+            camMetadata.update(ANDROID_STATISTICS_LENS_SHADING_MAP, flatMap,
+                    4 * map_width * map_height);
+        }
+    }
+
     /* Neither does it report CAM_INTF_META_COLOR_CORRECT_TRANSFORM. Derive a
      * camera (white balanced) RGB -> linear sRGB matrix from the static
      * forward matrix 1 (camera RGB -> XYZ D50): CCM = XYZ(D50)->sRGB * FM1.
@@ -4494,6 +4530,7 @@ int QCamera3HardwareInterface::initStaticMetadata(int cameraId)
        ANDROID_STATISTICS_SCENE_FLICKER, ANDROID_STATISTICS_FACE_IDS,
        ANDROID_STATISTICS_FACE_LANDMARKS, ANDROID_STATISTICS_FACE_RECTANGLES,
        ANDROID_STATISTICS_FACE_SCORES,
+       ANDROID_STATISTICS_LENS_SHADING_MAP,
        ANDROID_SENSOR_NOISE_PROFILE,
        ANDROID_SENSOR_GREEN_SPLIT};
     size_t result_keys_cnt =
