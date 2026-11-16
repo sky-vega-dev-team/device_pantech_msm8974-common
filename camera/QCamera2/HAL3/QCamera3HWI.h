@@ -276,6 +276,11 @@ private:
     bool mHaveFrameDuration;
     bool mHaveSensitivity;
     uint8_t mLastFlashMode;
+    /* Last complete result, the base of the results of frames the backend
+     * dropped the metadata of */
+    CameraMetadata mLastResult;
+    /* Last partial (3A) result, for the same */
+    CameraMetadata mLastUrgentResult;
     /* Settings of the last request that had any */
     camera_metadata_t *mLastSettings;
     QCamera3HeapMemory *mParamHeap;

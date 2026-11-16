@@ -1393,7 +1393,58 @@ void QCamera3HardwareInterface::handleMetadataWithLock(
         // Send empty metadata with already filled buffers for dropped metadata
         // and send valid metadata with already filled buffers for current metadata
         if (i->frame_number < frame_number) {
+            /* The backend dropped the metadata of this frame. A result with
+             * only a timestamp crashed HDR+ (no exposure time, no color
+             * gains): report the last complete result for it instead. */
             CameraMetadata dummyMetadata;
+            if (!mLastResult.isEmpty()) {
+                dummyMetadata = mLastResult;
+            } else {
+                /* None yet in this session: at least the exposure. */
+                int64_t exposure = mHaveExposureTime ? mLastExposureTime : 33333333;
+                int64_t duration = mHaveFrameDuration ? mLastFrameDuration : 33333333;
+                int32_t sensitivity = mHaveSensitivity ? mLastSensitivity : 100;
+                dummyMetadata.update(ANDROID_SENSOR_EXPOSURE_TIME, &exposure, 1);
+                dummyMetadata.update(ANDROID_SENSOR_FRAME_DURATION, &duration, 1);
+                dummyMetadata.update(ANDROID_SENSOR_SENSITIVITY, &sensitivity, 1);
+                dummyMetadata.update(ANDROID_FLASH_MODE, &mLastFlashMode, 1);
+                {
+                    int channels = gCamCapability[mCameraId]->num_color_channels;
+                    double noise_profile[2 * 4];
+                    if (channels > 4)
+                        channels = 4;
+                    for (int c = 0; c < channels; c++) {
+                        noise_profile[2 * c] = computeNoiseModelEntryS(sensitivity);
+                        noise_profile[2 * c + 1] = computeNoiseModelEntryO(sensitivity);
+                    }
+                    dummyMetadata.update(ANDROID_SENSOR_NOISE_PROFILE,
+                            noise_profile, 2 * channels);
+                }
+                if (mHaveCcGains)
+                    dummyMetadata.update(ANDROID_COLOR_CORRECTION_GAINS,
+                            mLastCcGains, 4);
+                if (mHaveCcTransform)
+                    dummyMetadata.update(ANDROID_COLOR_CORRECTION_TRANSFORM,
+                            mLastCcTransform, 9);
+                if (mHaveTonemap) {
+                    dummyMetadata.update(ANDROID_TONEMAP_CURVE_GREEN,
+                            (float *)mLastTonemap.curves[0].tonemap_points,
+                            mLastTonemap.tonemap_points_cnt * 2);
+                    dummyMetadata.update(ANDROID_TONEMAP_CURVE_BLUE,
+                            (float *)mLastTonemap.curves[1].tonemap_points,
+                            mLastTonemap.tonemap_points_cnt * 2);
+                    dummyMetadata.update(ANDROID_TONEMAP_CURVE_RED,
+                            (float *)mLastTonemap.curves[2].tonemap_points,
+                            mLastTonemap.tonemap_points_cnt * 2);
+                }
+            }
+            /* Nor did the frame get its partial result (3A states and
+             * settings, such as the exposure compensation HDR+ reads). */
+            if (!mLastUrgentResult.isEmpty()) {
+                camera_metadata_t *urgent = mLastUrgentResult.release();
+                dummyMetadata.append(urgent);
+                mLastUrgentResult.acquire(urgent);
+            }
             dummyMetadata.update(ANDROID_SENSOR_TIMESTAMP,
                     &i->timestamp, 1);
             dummyMetadata.update(ANDROID_REQUEST_ID,
@@ -3131,6 +3182,7 @@ QCamera3HardwareInterface::translateFromHalMetadata(
         camMetadata.update(ANDROID_SENSOR_NEUTRAL_COLOR_POINT, neutral, 3);
     }
 
+    mLastResult = camMetadata;
     resultMetadata = camMetadata.release();
     return resultMetadata;
 }
@@ -3306,6 +3358,7 @@ QCamera3HardwareInterface::translateCbUrgentMetadataToResultMetadata
         ALOGE("%s: Not enough info to deduce ANDROID_CONTROL_AE_MODE redeye:%p, flashMode:%p, aeMode:%p!!!",__func__, redeye, flashMode, aeMode);
     }
 
+    mLastUrgentResult = camMetadata;
     resultMetadata = camMetadata.release();
     return resultMetadata;
 }
