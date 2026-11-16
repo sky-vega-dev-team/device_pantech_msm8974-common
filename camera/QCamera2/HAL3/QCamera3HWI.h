@@ -268,6 +268,14 @@ private:
     bool mHaveCcTransform;
     bool mHaveCcMode;
     bool mHaveControlMode;
+    /* Last sensor exposure the backend reported, likewise */
+    int64_t mLastExposureTime;
+    int64_t mLastFrameDuration;
+    int32_t mLastSensitivity;
+    bool mHaveExposureTime;
+    bool mHaveFrameDuration;
+    bool mHaveSensitivity;
+    uint8_t mLastFlashMode;
     /* Settings of the last request that had any */
     camera_metadata_t *mLastSettings;
     QCamera3HeapMemory *mParamHeap;

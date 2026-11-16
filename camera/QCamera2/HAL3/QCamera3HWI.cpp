@@ -256,6 +256,10 @@ QCamera3HardwareInterface::QCamera3HardwareInterface(int cameraId,
       mHaveCcTransform(false),
       mHaveCcMode(false),
       mHaveControlMode(false),
+      mHaveExposureTime(false),
+      mHaveFrameDuration(false),
+      mHaveSensitivity(false),
+      mLastFlashMode(ANDROID_FLASH_MODE_OFF),
       mLastSettings(NULL),
       mParamHeap(NULL),
       mParameters(NULL),
@@ -3009,6 +3013,59 @@ QCamera3HardwareInterface::translateFromHalMetadata(
     } else if (mHaveControlMode) {
         camMetadata.update(ANDROID_CONTROL_MODE, &mLastControlMode, 1);
     }
+    /* Same for the sensor exposure: HDR+ crashed on a metering frame without
+     * ANDROID_SENSOR_EXPOSURE_TIME (NullPointerException in
+     * HdrPlusMetadataConverter.getExposureTimeMs). */
+    /* They are kept over stream configurations: the first results of a
+     * new session came without them as well. Before any came, report a
+     * typical exposure (1/30 s at ISO 100) rather than none. */
+    if (camMetadata.exists(ANDROID_SENSOR_EXPOSURE_TIME)) {
+        mLastExposureTime = camMetadata.find(ANDROID_SENSOR_EXPOSURE_TIME).data.i64[0];
+        mHaveExposureTime = true;
+    } else {
+        if (!mHaveExposureTime)
+            mLastExposureTime = 33333333;
+        camMetadata.update(ANDROID_SENSOR_EXPOSURE_TIME, &mLastExposureTime, 1);
+    }
+    if (camMetadata.exists(ANDROID_SENSOR_FRAME_DURATION)) {
+        mLastFrameDuration = camMetadata.find(ANDROID_SENSOR_FRAME_DURATION).data.i64[0];
+        mHaveFrameDuration = true;
+    } else {
+        if (!mHaveFrameDuration)
+            mLastFrameDuration = 33333333;
+        camMetadata.update(ANDROID_SENSOR_FRAME_DURATION, &mLastFrameDuration, 1);
+    }
+    if (camMetadata.exists(ANDROID_SENSOR_SENSITIVITY)) {
+        mLastSensitivity = camMetadata.find(ANDROID_SENSOR_SENSITIVITY).data.i32[0];
+        mHaveSensitivity = true;
+    } else {
+        if (!mHaveSensitivity)
+            mLastSensitivity = 100;
+        camMetadata.update(ANDROID_SENSOR_SENSITIVITY, &mLastSensitivity, 1);
+    }
+    /* HDR+ also reads the noise profile ("Attempt to read from null array")
+     * and the flash mode (Integer.intValue() on null), which come with the
+     * sensitivity and the flash mode from the backend only. */
+    if (!camMetadata.exists(ANDROID_SENSOR_NOISE_PROFILE)) {
+        int32_t sensitivity =
+                camMetadata.find(ANDROID_SENSOR_SENSITIVITY).data.i32[0];
+        int channels = gCamCapability[mCameraId]->num_color_channels;
+        double noise_profile[2 * 4];
+        if (channels > 4)
+            channels = 4;
+        for (int c = 0; c < channels; c++) {
+            noise_profile[2 * c] = computeNoiseModelEntryS(sensitivity);
+            noise_profile[2 * c + 1] = computeNoiseModelEntryO(sensitivity);
+        }
+        camMetadata.update(ANDROID_SENSOR_NOISE_PROFILE, noise_profile,
+                2 * channels);
+    }
+    if (camMetadata.exists(ANDROID_FLASH_MODE)) {
+        mLastFlashMode = camMetadata.find(ANDROID_FLASH_MODE).data.u8[0];
+    } else {
+        camMetadata.update(ANDROID_FLASH_MODE, &mLastFlashMode, 1);
+    }
+
     /* Neither does it report CAM_INTF_META_COLOR_CORRECT_TRANSFORM. Derive a
      * camera (white balanced) RGB -> linear sRGB matrix from the static
      * forward matrix 1 (camera RGB -> XYZ D50): CCM = XYZ(D50)->sRGB * FM1.
