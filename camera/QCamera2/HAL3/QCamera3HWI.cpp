@@ -2864,6 +2864,31 @@ QCamera3HardwareInterface::translateFromHalMetadata(
         camMetadata.update(ANDROID_SCALER_CROP_REGION, scalerCropRegion, 4);
     }
 
+    /* The backend never reports CAM_INTF_META_NEUTRAL_COL_POINT, but the key
+     * is listed in the available result keys (RAW capability) and clients
+     * such as HDR+ / DNG writers expect it. Derive it from the AWB gains:
+     * the neutral point in camera native RGB is the inverse of the gains,
+     * normalized to green. Fall back to (1, 1, 1) without gains. */
+    if (!camMetadata.exists(ANDROID_SENSOR_NEUTRAL_COLOR_POINT)) {
+        const int32_t denom = 1 << 16;
+        camera_metadata_rational_t neutral[3] = {
+            {denom, denom}, {denom, denom}, {denom, denom}};
+        if (camMetadata.exists(ANDROID_COLOR_CORRECTION_GAINS)) {
+            camera_metadata_entry_t gains =
+                    camMetadata.find(ANDROID_COLOR_CORRECTION_GAINS);
+            if (gains.count == 4) {
+                float r = gains.data.f[0];
+                float g = (gains.data.f[1] + gains.data.f[2]) / 2.0f;
+                float b = gains.data.f[3];
+                if (r > 0.0f && g > 0.0f && b > 0.0f) {
+                    neutral[0].numerator = (int32_t)(g / r * denom + 0.5f);
+                    neutral[2].numerator = (int32_t)(g / b * denom + 0.5f);
+                }
+            }
+        }
+        camMetadata.update(ANDROID_SENSOR_NEUTRAL_COLOR_POINT, neutral, 3);
+    }
+
     resultMetadata = camMetadata.release();
     return resultMetadata;
 }
