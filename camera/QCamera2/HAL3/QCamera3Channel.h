@@ -148,6 +148,8 @@ public:
 protected:
     QCamera3GrallocMemory mMemory;
 private:
+    bool isUnwrittenBuffer(uint32_t index);
+
     camera3_stream_t *mCamera3Stream;
     uint32_t mNumBufs;
 

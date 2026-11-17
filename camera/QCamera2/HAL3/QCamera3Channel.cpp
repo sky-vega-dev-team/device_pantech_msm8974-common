@@ -737,9 +737,52 @@ void QCamera3RegularChannel::streamCbRoutine(
     result.acquire_fence = -1;
     result.release_fence = -1;
 
+    /* At the start of 4K recordings the backend hands back some video
+     * buffers that it never wrote: the ISP refuses the buffers that come
+     * after its channel started, and they reach the encoder as green
+     * frames. Such a buffer is still all zeros, luma and chroma alike,
+     * which no picture is; report it as an error so it is dropped. */
+    if (mStreamType == CAM_STREAM_TYPE_VIDEO &&
+            isUnwrittenBuffer(frameIndex)) {
+        ALOGW("%s: video buffer of frame %d was not written, dropping it",
+                __func__, resultFrameNumber);
+        result.status = CAMERA3_BUFFER_STATUS_ERROR;
+    }
+
     mChannelCB(NULL, &result, resultFrameNumber, mUserData);
     free(super_frame);
     return;
+}
+
+/*===========================================================================
+ * FUNCTION   : isUnwrittenBuffer
+ *
+ * DESCRIPTION: tell whether a returned buffer still holds only zeros
+ *
+ * PARAMETERS :
+ *   @index   : index of the buffer
+ *
+ * RETURN     : true if the samples taken over the luma and chroma planes
+ *              are all zero
+ *==========================================================================*/
+bool QCamera3RegularChannel::isUnwrittenBuffer(uint32_t index)
+{
+    const uint8_t *ptr = (const uint8_t *)mMemory.getPtr(index);
+    int size = mMemory.getSize(index);
+
+    if (ptr == NULL || ptr == (const uint8_t *)BAD_INDEX || size < 4096)
+        return false;
+
+    mMemory.invalidateCache(index);
+    /* Luma is the first two thirds of a YUV 4:2:0 buffer, chroma the
+     * rest; a picture never has zero chroma (that is green). */
+    for (int i = 1; i < 24; i++) {
+        uint32_t word;
+        memcpy(&word, ptr + ((size / 24) * i & ~3), sizeof(word));
+        if (word != 0)
+            return false;
+    }
+    return true;
 }
 
 QCamera3Memory* QCamera3RegularChannel::getStreamBufs(uint32_t /*len*/)
